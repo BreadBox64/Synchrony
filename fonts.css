@@ -1,0 +1,100 @@
+@font-face {
+	font-family: "Josefin Sans";
+	src: url(font/Josefin_Sans/JosefinSans-VariableFont_wght.ttf);
+}
+
+@font-face {
+	font-family: "Nunito Sans";
+	src: url(font/Nunito_Sans/NunitoSans-VariableFont_YTLC\,opsz\,wdth\,wght.ttf);
+}
+
+@font-face {
+	font-family: 'Material Symbols Outlined';
+  font-style: normal;
+	src: url(font/Material_Design_Icons/MaterialSymbolsOutlined[FILL\,GRAD\,opsz\,wght].ttf);
+}
+
+.josefin-sans {
+	font-family: "Josefin Sans", sans-serif;
+	font-optical-sizing: auto;
+	font-style: normal;
+}
+
+.nunito-sans {
+	font-family: "Nunito Sans", sans-serif;
+	font-optical-sizing: auto;
+	font-style: normal;
+	font-variation-settings:
+		"wdth" 100,
+		"YTLC" 500;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 48px;  /* Preferred icon size */
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+}
+
+span.size-32 {
+  font-size: 32px;
+  font-variation-settings: 'OPSZ' 32;
+}
+
+span.size-48 {
+  font-size: 48px;
+  font-variation-settings: 'OPSZ' 48;
+}
+
+span.size-64 {
+  font-size: 64px;
+  font-variation-settings: 'OPSZ' 64;
+}
+
+span.size-80 {
+	line-height: 80px;
+  font-size: 80px;
+  font-variation-settings: 'OPSZ' 80;
+}
+
+span.size-96 {
+  font-size: 96px;
+  font-variation-settings: 'OPSZ' 96;
+}
+
+span.wght-7 {
+	font-variation-settings: 'wght' 700;
+}
+
+/*
+.pulse {
+  animation: pulse 2s infinite ease-in-out alternate;
+}
+
+@keyframes pulse {
+  0% {
+    font-variation-settings: 'wght' 550;
+  }
+  100% {
+    font-variation-settings: 'wght' 700;
+  }
+}*/
+
+.spin {
+	animation-name: spin;
+	animation-duration: 2s;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
+}
+
+@keyframes spin {
+	from {transform:rotate(360deg);}
+	to {transform:rotate(0deg);}
+}

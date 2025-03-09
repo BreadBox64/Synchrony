@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' style-src 'self' 'unsafe-inline';"
+    />
+    <meta
+      http-equiv="X-Content-Security-Policy"
+      content="default-src 'self' style-src 'self' 'unsafe-inline';"
+    />
+    <title>Synchrony</title>
+    <link rel="stylesheet" href="fonts.css">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <h1 class="josefin-sans hcenter" style="font-weight: 900; margin: 16px 8px 24px 8px;">Synchrony: A Simple Modpack Sync Application</h1>
+    <div id="main">
+      <div class="loadingElement">
+        <div class="skill tooltip">
+          <div class="outer">
+            <div class="inner">
+              <span class="material-symbols-outlined size-80" id="materialsymbol-update">sync</span>
+            </div>
+          </div>
+          <p class="tooltiptext nunito-sans" id="tooltip-update">Tooltip text</p>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" id="loadingicon-update" version="1.1" width="160px", height="160px">
+          <defs>
+            <linearGradient id="gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#db59ff"/>
+              <stop offset="100%" stop-color="#4980f7"/>
+            </linearGradient>
+          </defs>
+          <circle id="loadingelement-update" cx="80" cy="80" r="70"/>
+        </svg>
+      </div>
+      <div id="content">
+        <h1 class="nunito-sans">Bannana Modpack</h1>
+        <p class="nunito-sans" id="resp">Checking Online for Updates...</p>
+      </div>
+      <script src="renderer.js"></script>
+    </div>
+  </body>
+</html>
