@@ -69,6 +69,11 @@ span.size-96 {
   font-variation-settings: 'OPSZ' 96;
 }
 
+span.size-144 {
+  font-size: 144px;
+  font-variation-settings: 'OPSZ' 144;
+}
+
 span.wght-7 {
 	font-variation-settings: 'wght' 700;
 }

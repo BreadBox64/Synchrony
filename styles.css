@@ -1,40 +1,88 @@
 :root {
 	--loadValue: 440px;
-	--mainColor: rgb(240, 240, 240);
-	--secColor: rgb(44, 44, 44);
-	--terColor: rgb(235, 230, 255);
-	--quatColor: rgb(212, 201, 252);
-	--pentColor: rgb(145, 145, 145);
+	--mainColor: #2c2c2c;
+	--secColor: #dddddd;
+	--terColor: #201f22;
+	--quatColor: #29292c;
+	--pentColor: #242327;
 }
 
 * {
-	pointer-events: none;
 	margin: 0;
 	padding: 0;
 	box-sizing: border-box;
+	pointer-events: none;
+}
+
+body {
+	height: 100%;
 }
 
 html {
-	padding: 8px;
+	background-color: var(--mainColor);
+	height: 100%;
 }
 
 .hcenter {
 	margin-left: auto;
-  margin-right: auto;
+	margin-right: auto;
 	text-align: center;
 }
 
 #main {
-	max-width: 768px;
-	min-width: 384px;
-	margin: auto;
-	background-color: var(--quatColor);
+	width: 768px;
+	height: 100%;
+	margin: 0px auto;
+	padding: 8px 16px;
+	background-color: var(--mainColor);
+
+	h1 {
+		color: var(--secColor);
+		pointer-events: all;
+	}
+}
+
+#modpackList>div {
+	margin: 32px 0px;
+}
+
+#modpackAdd {
+	display: flex;
+	justify-content: center;
+
+	span {
+		color: var(--secColor);
+		pointer-events: all;
+		align-items: center;
+		width: min-content;
+		height: min-content;
+		margin: 0px 32px;
+		padding: 32px;
+		background-color: var(--quatColor);
+		user-select: none;
+		box-shadow: 6px 6px 10px -1px rgba(0, 0, 0, 0.15);
+		text-shadow: 4px 4px 6px rgba(0, 0, 0, 0.15);
+		border-radius: 16px;
+		transition: background-color 0.2s linear;
+	}
+
+	span:hover {
+		background-color: var(--pentColor);
+	}
+}
+
+.modpackContainer {
+	box-shadow: 6px 6px 10px -1px rgba(0, 0, 0, 0.15);
+	border-radius: 16px;
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	transition: background-color 0.2s linear;
+	pointer-events: all;
 }
 
-#content {
+.content {
+	color: var(--secColor);
 	display: flex;
 	justify-content: left;
 	align-items: center;
@@ -47,7 +95,7 @@ html {
 	width: 160px;
 	margin: 40px clamp(20px, 5.21%, 40px);
 
-	.skill {
+	.loadingElement-static {
 		width: 160px;
 		height: 160px;
 	}
@@ -57,7 +105,7 @@ html {
 		height: 160px;
 		padding: 20px;
 		box-shadow: 6px 6px 10px -1px rgba(0, 0, 0, 0.15);
-		background-color: var(--secColor);
+		background-color: transparent;
 		border-radius: 50%;
 	}
 
@@ -65,7 +113,6 @@ html {
 		width: 120px;
 		height: 120px;
 		box-shadow: inset 4px 4px 6px -1px rgba(0, 0, 0, 0.15);
-		background-color: var(--quatColor);
 		border-radius: 50%;
 		display: flex;
 		justify-content: center;
@@ -74,63 +121,35 @@ html {
 
 	span {
 		color: var(--secColor);
-		pointer-events: all;
 		opacity: 0;
 		transition: opacity 0.6s;
 		user-select: none;
 		text-shadow: 4px 4px 6px rgba(0, 0, 0, 0.15);
 	}
 
-	circle {
-		fill: none;
-		stroke: url(#gradient);
-		stroke-width: 15px;
-		stroke-dashoffset: var(--loadValue);
-		stroke-dasharray: 440px;
-		transition: stroke-dashoffset 0.15s;
-	}
-
 	svg {
+		pointer-events: all;
 		transition: opacity 1s;
 		position: relative;
-		top: -160px;
+	}
+
+	circle {
+		fill: none;
+	}
+
+	.loadingElement-bg {
+		stroke: var(--secColor);
+		stroke-width: 20px;
+	}
+
+	.loadingElement-circle {
+		stroke-width: 15px;
+		stroke-dasharray: 440px;
+		transition: stroke-dashoffset 0.15s;
 	}
 }
 
 .tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltiptext {
-  visibility: hidden;
-  width: 120px;
-  background-color: rgba(from var(--terColor) r g b / 50%);
-  color: var(--secColor);
-  text-align: center;
-  border-radius: 6px;
-  padding: 5px 0;
-  position: absolute;
-  z-index: 1;
-  top: 105%;
-  left: 50%;
-	margin-top: 6px;
-	margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.5s linear 1s;
-}
-
-.tooltip .tooltiptext::after {
-  content: "";
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: transparent transparent rgba(from var(--terColor) r g b / 50%) transparent;
-}
-.tooltip:hover .tooltiptext {
-  visibility: visible;
-  opacity: 1;
+	position: relative;
+	display: inline-block;
 }

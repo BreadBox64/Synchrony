@@ -1,0 +1,35 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"command": "npx electron-forge make --platform=win32",
+			"problemMatcher": [],
+			"label": "win32 build",
+			"group": "build"
+		},
+		{
+			"type": "shell",
+			"command": "npx electron-forge make --platform=linux",
+			"problemMatcher": [],
+			"label": "linux build"
+		},
+		{
+			"label": "All Platform Build",
+			"dependsOn": [
+				"win32 build",
+				"linux build"
+			],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Release",
+			"type": "shell",
+			"command": "gh release create --fail-on-no-commits -d --generate-notes"
+		}
+	]
+}

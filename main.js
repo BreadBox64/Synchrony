@@ -1,115 +1,107 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron/main');
-const { log, debug, error } = require('node:console');
+const {log, debug, error} = require('node:console'); 
 const { randomInt } = require('node:crypto');
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const path = require('node:path')
-const { DownloaderHelper } = require('node-downloader-helper');
-const { errorMonitor } = require('node:events');
-const SynchronyVersion = '1.0.0'
 
-const delay = millis => new Promise((resolve, reject) => {
-  setTimeout(_ => resolve(), millis)
-})
+const { app, BrowserWindow, dialog, ipcMain } = require('electron/main');
+const { DownloaderHelper } = require('node-downloader-helper');
+
+global.moduleExport = {
+  log,
+  debug,
+  error,
+  fs,
+  fsp,
+  path,
+  app,
+  dialog
+}
+
+const {loadConfig, saveConfig, loadPackConfig, loadPackConfigs, savePackConfig, newPackConfig} = require("./config.js")
+const {delay} = require("./utils.js");
+const { pid } = require('node:process');
+
+function handleSquirrelEvent() {
+  if (process.platform !== 'win32') {
+    return false;
+  }
+  if (process.argv.length === 1) {
+    return false;
+  }
+
+  const ChildProcess = require('child_process');
+
+  const appFolder = path.resolve(process.execPath, '..');
+  const rootAtomFolder = path.resolve(appFolder, '..');
+  const updateDotExe = path.resolve(path.join(rootAtomFolder, 'Update.exe'));
+  const exeName = path.basename(process.execPath);
+
+  const spawn = function(command, args) {
+    let spawnedProcess, error;
+
+    try {
+      spawnedProcess = ChildProcess.spawn(command, args, {detached: true});
+    } catch (error) {}
+
+    return spawnedProcess;
+  };
+
+  const spawnUpdate = function(args) {
+    return spawn(updateDotExe, args);
+  };
+
+  const squirrelEvent = process.argv[1];
+  switch (squirrelEvent) {
+    case '--squirrel-install':
+    case '--squirrel-updated':
+      // Optionally do things such as:
+      // - Add your .exe to the PATH
+      // - Write to the registry for things like file associations and
+      //   explorer context menus
+
+      // TODO - Actually handle config setup etc. with installer
+      // Install desktop and start menu shortcuts
+      spawnUpdate(['--createShortcut', exeName]);
+
+      setTimeout(app.quit, 1000);
+      return true;
+
+    case '--squirrel-uninstall':
+      // Undo anything you did in the --squirrel-install and
+      // --squirrel-updated handlers
+
+      // Remove desktop and start menu shortcuts
+      spawnUpdate(['--removeShortcut', exeName]);
+
+      setTimeout(app.quit, 1000);
+      return true;
+
+    case '--squirrel-obsolete':
+      // This is called on the outgoing version of your app before
+      // we update to the new version - it's the opposite of
+      // --squirrel-updated
+
+      app.quit();
+      return true;
+  }
+};
+
+if (handleSquirrelEvent()) {
+  // squirrel event handled and app will exit in 1000ms, so don't do anything else
+  return;
+}
+
 const configPath = path.join(app.getPath('userData'), 'synchronyConfig')
 const sessionPath = app.getPath('sessionData')
 let modpackPath = path.join(app.getPath('documents'), 'synchrony-modpack') // ============================================
-let versionData = {
-  current: {},
-  upstream: {}
-}
-let config = {
-  defaultPack: 0,
-  packConfigs: ['/home/breadbox64/Documents/synchrony-modpack/modpackConfig'],
-  maxWorkers: 5
-}
-let packConfig = {}
+let config = {}
+let packConfigs = {}
 const versionRegex = /(\d+)\.(\d+)\.(\d+)(?:-([b|n])(\d+))?/;
 let win;
 
-try {
-  if(require('electron-squirrel-startup')) app.quit();
-} catch(e) {
-  debug("electron-squirrel-startup not found, this is expected.")
-}
-
-async function loadPackConfig(path) {
-  let newPackConfig = {}
-  let configString
-  try {
-    configString = await fsp.readFile(path, 'utf-8')
-  } catch(e) {
-    error(e)
-    return
-  }
-
-  configString.split('\n').forEach((line) => {
-    const [param, value] = line.split(' => ')
-    newPackConfig[param] = value
-  })
-
-  packConfig = newPackConfig
-}
-
-async function savePackConfig(path) {
-  
-}
-
-async function loadConfig() {
-  let newConfig = {}
-  let configString
-  try {
-    configString = await fsp.readFile(configPath, 'utf-8')
-  } catch(e) {
-    error(e)
-    return false
-  }
-
-  try {
-    const getParser = (p) => {
-      switch(p) {
-        case 'defaultPack':
-          return parseInt
-        case 'packConfigs':
-          return (v) => {
-            return v.split(' ||| ')
-          }
-        default:
-          return (v) => {return v}
-      }
-    }
-    configString.split('\n').forEach((line) => {
-      const [param, value] = line.split(' => ')
-      newConfig[param] = (getParser(param))(value)
-    })
-    config = newConfig
-    loadPackConfig(config.packConfigs[config.defaultPack])
-    return true
-  } catch(e) {
-    error(e)
-    return false
-  }
-}
-
-function saveConfig() {
-  const configString = [
-    `synchronyVersion => ${SynchronyVersion}`,
-    `defaultPack => ${config.defaultPack.toString()}`,
-    `packConfigs => ${config.packConfigs.join(' ||| ')}`
-  ].join('\n')
-
-  fs.writeFileSync(configPath, configString, {override: true})
-}
-
-async function handleFileOpen() {
-  const { canceled, filePaths } = await dialog.showOpenDialog({})
-  if (!canceled) {
-    return filePaths[0]
-  }
-}
-
 function compileChanges() {
-
+  // TODO
 }
 
 async function updateModpack() {
@@ -207,64 +199,47 @@ function readVersionData(inputStr) {
   return out
 }
 
-const updateDownloadErrorHandler = (e) => {win.webContents.send('Error:VersionDownload', e); error(e)}
-function checkForUpdates() {
-  log(config)
-  log(packConfig)
+const updateDownloadErrorHandler = (p, e) => {return () => {win.webContents.send('Error:VersionDownload', p, e); error(e)}}
+function checkForUpdates(packConfig) {
   let updateNeeded = false
+  let versionData = {}
 
   try {
-  let dl = new DownloaderHelper(packConfig.upstreamVersion, sessionPath, {
-    fileName: 'upstreamVersion',
+  let dl = new DownloaderHelper(packConfig.upstreamVersionURL, sessionPath, {
+    fileName: `${packConfig.id}:upstreamVersion`,
     override: true,
     retry: {maxRetries: 5, delay: 1000}
   });
   dl.on('end', () => {
     debug("Downloaded versioning file.")
     try {
-      let upstreamVersionFile = fs.readFileSync(path.join(sessionPath, 'upstreamVersion'), 'utf8').split('\n');
-      
-      versionData.current = readVersionData(packConfig.localVersion)
-      
-      for(let i = 7; i < upstreamVersionFile.length; i++) {
-        if(upstreamVersionFile[i] == packConfig.localVersion) {
-          versionData.upstream = readVersionData(upstreamVersionFile[i])
-          win.webContents.send('Update:Response', true, versionData)
-          return true
+      let upstreamVersionFile = fs.readFileSync(path.join(sessionPath, `${packConfig.id}:upstreamVersion`), 'utf8').split('\n');
+
+      for(let i = 0; i < upstreamVersionFile.length; i++) {
+        if(upstreamVersionFile[i] === packConfig.localBranch) {
+          packConfig.upstreamVersion = upstreamVersionFile[i+1]
         }
       }
 
-      if(versionData.current.flag) {
-        if(versionData.current.flag == 'n') {
-          versionData.upstream = readVersionData(upstreamVersionFile[1])
-        } else if(versionData.current.flag == 'b') {
-          versionData.upstream = readVersionData(upstreamVersionFile[3])
-        } else {
-          win.webContents.send('Error:VersionRead', "Invalid Version Flag")
-        }
-      } else {
-        versionData.upstream = readVersionData(upstreamVersionFile[5])
-      }
-
-      let cv = versionData.current
-      let uv = versionData.upstream
-      if(cv.major >= uv.major) {
-        if(cv.minor >= uv.minor) {
-          if(cv.patch >= uv.patch) {
-            if(cv.flag && cv.flagv < uv.flagv) updateNeeded = true
+      let lv = readVersionData(packConfig.localVersion)
+      let uv = readVersionData(packConfig.upstreamVersion)
+      if(lv.major >= uv.major) {
+        if(lv.minor >= uv.minor) {
+          if(lv.patch >= uv.patch) {
+            if(lv.flag && lv.flagv < uv.flagv) updateNeeded = true
           } else {updateNeeded = true}
         } else {updateNeeded = true}
       } else {updateNeeded = true}
 
-      win.webContents.send('Update:Response', updateNeeded, versionData)
+      win.webContents.send('Update:Response', packConfig.id, updateNeeded, {upstream: uv, local: lv})
     } catch(e) {
-      win.webContents.send('Error:VersionRead', e)
+      win.webContents.send('Error:VersionRead', packConfig.id, e)
       error(e)
     }
   });
-  dl.on('error', updateDownloadErrorHandler);
-  dl.start().catch(updateDownloadErrorHandler);
-  } catch(e) {updateDownloadErrorHandler(e)}
+  dl.on('error', updateDownloadErrorHandler(packConfig.id, "Internal Error"));
+  dl.start().catch(updateDownloadErrorHandler(packConfig.id, "Internal Error"));
+  } catch(e) {updateDownloadErrorHandler(packConfig.id, e)}
   return updateNeeded
 }
 
@@ -281,27 +256,49 @@ const createWindow = () => {
     title: "Synchrony",
   })
 
-  win.setMinimumSize(400, 300)
+  win.setMinimumSize(800, 600)
   win.loadFile('index.html')
 
   win.once('ready-to-show', () => {
     win.show()
+    setTimeout(afterReady, 10)
   })
   return win
 }
 
+async function afterReady() {
+  const [configSuccess, configData] = loadConfig(configPath, config)
+  if(configSuccess) config = configData; else return
+
+  const [packSuccess, packData] = loadPackConfigs(config.packConfigs)
+  if(packSuccess) packConfigs = packData; else return
+  log(packConfigs)
+
+  win.webContents.send('Pack:ConfigsRead', packConfigs)
+  log("Send Configs")
+}
+
+app.setAppLogsPath()
 app.whenReady().then(() => {
   win = createWindow()
-  ipcMain.handle('dialog:openFile', handleFileOpen)
-  ipcMain.handle('update:check', checkForUpdates)
-  ipcMain.handle('start', updateModpack)
-  //ipcMain.on('msg', () => {debug("msg")})
-  //ipcMain.handle('msg', () => {debug("msg")})
+  ipcMain.handle('Dialog:Open', (options) => dialog.showOpenDialogSync(options))
+  ipcMain.handle('Update:CheckAll', () => {
+    
+  })
+  ipcMain.handle('Update:Check', (_event, modpackId) => checkForUpdates(packConfigs[modpackId]))
 
-  loadConfig()
+  ipcMain.handle('start', async (_event, modpackId) => {
+    log(`modpackId: ${modpackId}`)
+    for(let i = 0; i <= 100; i++) {
+      win.webContents.send('Update:Percent', modpackId, i)
+      await delay(50)
+    }
+    win.webContents.send('Update:Complete', modpackId, true)
+  })
 })
 
 app.on('window-all-closed', () => {
-  saveConfig()
+  saveConfig(configPath, config)
+  
   app.quit()
 })
