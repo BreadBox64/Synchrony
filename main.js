@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const path = require('node:path')
 
-const { app, BrowserWindow, dialog, ipcMain } = require('electron/main');
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme } = require('electron/main');
 const { DownloaderHelper } = require('node-downloader-helper');
 
 global.moduleExport = {
@@ -243,6 +243,15 @@ function checkForUpdates(packConfig) {
   return updateNeeded
 }
 
+function addModpack(addMethod, arguments) {
+  dialog.showOpenDialogSync({
+    title: "Select the existing modpack folder",
+    properties: ['openDirectory']
+  })
+
+  return [false, null]
+}
+
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1080,
@@ -260,34 +269,34 @@ const createWindow = () => {
   win.loadFile('index.html')
 
   win.once('ready-to-show', () => {
-    win.show()
-    setTimeout(afterReady, 10)
+    const [configSuccess, configData] = loadConfig(configPath, config)
+    if(configSuccess) config = configData; else return
+    win.webContents.send('App:ConfigRead', config)
+
+    const [packSuccess, packData] = loadPackConfigs(config.packConfigs)
+    if(packSuccess) packConfigs = packData; else return
+    win.webContents.send('Pack:ConfigsRead', packConfigs)
+  
+    setTimeout(() => {win.show()}, 10)
   })
   return win
-}
-
-async function afterReady() {
-  const [configSuccess, configData] = loadConfig(configPath, config)
-  if(configSuccess) config = configData; else return
-
-  const [packSuccess, packData] = loadPackConfigs(config.packConfigs)
-  if(packSuccess) packConfigs = packData; else return
-  log(packConfigs)
-
-  win.webContents.send('Pack:ConfigsRead', packConfigs)
-  log("Send Configs")
 }
 
 app.setAppLogsPath()
 app.whenReady().then(() => {
   win = createWindow()
-  ipcMain.handle('Dialog:Open', (options) => dialog.showOpenDialogSync(options))
+  ipcMain.handle('App:ThemeChange', (_event, newTheme) => {
+    nativeTheme.themeSource = newTheme
+    config.theme = newTheme
+    return nativeTheme.shouldUseDarkColors
+  })
+  ipcMain.handle('App:AddPack', (_event, addMethod, arguments) => addModpack(addMethod, arguments))
   ipcMain.handle('Update:CheckAll', () => {
     
   })
   ipcMain.handle('Update:Check', (_event, modpackId) => checkForUpdates(packConfigs[modpackId]))
 
-  ipcMain.handle('start', async (_event, modpackId) => {
+  ipcMain.handle('Update:Start', async (_event, modpackId) => {
     log(`modpackId: ${modpackId}`)
     for(let i = 0; i <= 100; i++) {
       win.webContents.send('Update:Percent', modpackId, i)

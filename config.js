@@ -62,7 +62,8 @@ const defaultConfig = {
   defaultPack: 0,
   packConfigs: [],
   maxWorkers: 5,
-  synchronyVersion: app.getVersion()
+  synchronyVersion: app.getVersion(),
+  theme: 'system'
 }
 
 function loadConfig(path) {
@@ -110,7 +111,8 @@ function saveConfig(path, config) {
       `synchronyVersion => ${config.synchronyVersion}`,
       `defaultPack => ${config.defaultPack.toString()}`,
       `packConfigs => ${config.packConfigs.join(' ||| ')}`,
-      `maxWorkers => ${config.maxWorkers}`
+      `maxWorkers => ${config.maxWorkers}`,
+      `theme => ${config.theme}`
     ].join('\n')
 
     fs.writeFileSync(path, configString, {override: true})

@@ -8,9 +8,8 @@ import "./jsdoc.js"
  */
 export function createModpackElement(config, displayConfig) {
 	const gradientColors = displayConfig.gradient
-	const colorSet = displayConfig.colors
 	const element = 
-	`<div class="modpackContainer" id="modpack-${config.id}" style="background-color: ${colorSet[3]}">
+	`<div class="modpackContainer" id="modpack-${config.id}" style="background-color: var(--color0-${config.id})">
 		<div class="loadingElement">
 			<div>
 				<div class="loadingElement-static tooltip">
@@ -44,11 +43,14 @@ export function createModpackElement(config, displayConfig) {
 
 /**
  * Switch modpack element to given theme
- * @param {dom} dom 
+ * @param {string} id Element modpackId
+ * @param {root} Element Document root 
  * @param {displayConfig} displayConfig 
  * @param {string} theme Theme to switch to 
  */
-export function updateElementTheme(dom, displayConfig, theme) {
+export function updateElementTheme(id, root, displayConfig, useDarkMode) {
+	root.style.setProperty(`--color0-${id}`, displayConfig.colors[useDarkMode ? 2 : 0])
+	root.style.setProperty(`--color1-${id}`, displayConfig.colors[useDarkMode ? 3 : 1])
 }
 
 //<circle class="loadingElement-circle" style="stroke: url(#gradient-${config.id}); stroke-dashoffset: var(--loadValue-${config.id})" cx="80" cy="80" r="70"/>

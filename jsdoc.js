@@ -1,10 +1,19 @@
 /**
- * @typedef modpackId
- * @type {string}
+ * @typedef config
+ * @type {object}
+ * @property {string} id
+ * @property {string} name
+ * @property {?string} description
+ * @property {?string} customColorSet
+ * @property {?string} customGradient
+ * @property {string} localBranch
+ * @property {string} localVersion
+ * @property {string} upstreamVersionURL
+ * @property {string} upstreamChangelist
  */
 
 /**
- * @typedef config
+ * @typedef packConfig
  * @type {object}
  * @property {string} id
  * @property {string} name

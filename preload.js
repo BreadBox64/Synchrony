@@ -6,11 +6,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   chrome: () => process.versions.chrome,
   electron: () => process.versions.electron,
 
-  openFile: () => ipcRenderer.invoke('dialog:openFile'),
   checkForUpdate: (modpackId) => ipcRenderer.invoke('Update:Check', modpackId),
-  startProcess: (modpackId) => ipcRenderer.invoke('start', modpackId),
+  startProcess: (modpackId) => ipcRenderer.invoke('Update:Start', modpackId),
+
+  ThemeChange: (newTheme) => ipcRenderer.invoke('App:ThemeChange', newTheme),
+  DialogOpen: (options) => ipcRenderer.invoke('Dialog:Open', options),
 
   onReady: (callback) => ipcRenderer.on('Ready', (_event) => callback()),
+  onConfigRead: (callback) => ipcRenderer.on('App:ConfigRead', (_event, config) => callback(config)),
   onPackConfigRead: (callback) => ipcRenderer.on('Pack:ConfigsRead', (_event, configs) => callback(configs)),
 
   onVersionDownloadError: (callback) => ipcRenderer.on('Error:VersionDownload', (_event, modpackId, err) => callback(err)),
