@@ -78,20 +78,6 @@ span.wght-7 {
 	font-variation-settings: 'wght' 700;
 }
 
-/*
-.pulse {
-  animation: pulse 2s infinite ease-in-out alternate;
-}
-
-@keyframes pulse {
-  0% {
-    font-variation-settings: 'wght' 550;
-  }
-  100% {
-    font-variation-settings: 'wght' 700;
-  }
-}*/
-
 .spin {
 	animation-name: spin;
 	animation-duration: 2s;
@@ -102,4 +88,20 @@ span.wght-7 {
 @keyframes spin {
 	from {transform:rotate(360deg);}
 	to {transform:rotate(0deg);}
+}
+
+.pulse {
+  animation-name: pulse;
+	animation-duration: 1.2s;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
+}
+
+@keyframes pulse {
+	0% {font-variation-settings: 'wght' 400}
+	5% {font-variation-settings: 'wght' 400}
+	45% {font-variation-settings: 'wght' 700}
+	55% {font-variation-settings: 'wght' 700}
+  95% {font-variation-settings: 'wght' 400}
+  100% {font-variation-settings: 'wght' 400}
 }

@@ -1,4 +1,4 @@
-const {log, debug, error} = require('node:console'); 
+const {log, debug, error, timeEnd} = require('node:console'); 
 const { randomInt } = require('node:crypto');
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
@@ -100,12 +100,22 @@ let packConfigs = {}
 const versionRegex = /(\d+)\.(\d+)\.(\d+)(?:-([b|n])(\d+))?/;
 let win;
 
-function compileChanges() {
-  // TODO
+/**
+ * 
+ * @param {string} changelist 
+ */
+function compileChanges(changelist) {
+  log(changelist)
 }
 
-async function updateModpack() {
+/**
+ * 
+ * @param {string} modpackId 
+ * @returns {null}
+ */
+async function updateModpack(modpackId) {
   let errorCond = false
+  /** @type {string} */
   let upstreamChangelistFile
   let changeDesc, changes
 
@@ -132,6 +142,9 @@ async function updateModpack() {
   try {
     [changeDesc, changes] = compileChanges(upstreamChangelistFile)
   } catch(e) {error(e); errorCond = true; win.webContents.send('Error:ChangelistCompile', e)}
+  log(changeDesc)
+  log(changes)
+  return
 
   let workers = []
   let activeWorkers = 0
@@ -202,7 +215,7 @@ function readVersionData(inputStr) {
 const updateDownloadErrorHandler = (p, e) => {return () => {win.webContents.send('Error:VersionDownload', p, e); error(e)}}
 function checkForUpdates(packConfig) {
   let updateNeeded = false
-  let versionData = {}
+  let timedOut = false
 
   try {
   let dl = new DownloaderHelper(packConfig.upstreamVersionURL, sessionPath, {
@@ -231,14 +244,21 @@ function checkForUpdates(packConfig) {
         } else {updateNeeded = true}
       } else {updateNeeded = true}
 
-      win.webContents.send('Update:Response', packConfig.id, updateNeeded, {upstream: uv, local: lv})
+      win.webContents.send('Update:Response', packConfig.id, updateNeeded, packConfig)
     } catch(e) {
       win.webContents.send('Error:VersionRead', packConfig.id, e)
       error(e)
     }
   });
-  dl.on('error', updateDownloadErrorHandler(packConfig.id, "Internal Error"));
-  dl.start().catch(updateDownloadErrorHandler(packConfig.id, "Internal Error"));
+  dl.on('retry', (attempt, retryOptions) => {
+    log(`attempt ${attempt}`)
+    if(attempt == retryOptions.maxRetries) {
+      timedOut = true
+      updateDownloadErrorHandler(packConfig.id, "Timed Out")()
+    }
+  })
+  dl.on('error', () => {if(!timedOut) updateDownloadErrorHandler(packConfig.id, "Internal Error")});
+  dl.start().catch(() => {if(!timedOut) updateDownloadErrorHandler(packConfig.id, "Internal Error")});
   } catch(e) {updateDownloadErrorHandler(packConfig.id, e)}
   return updateNeeded
 }
@@ -276,6 +296,7 @@ const createWindow = () => {
     const [packSuccess, packData] = loadPackConfigs(config.packConfigs)
     if(packSuccess) packConfigs = packData; else return
     win.webContents.send('Pack:ConfigsRead', packConfigs)
+    Object.entries(packConfigs).forEach(([_id, packConfig]) => {checkForUpdates(packConfig)})
   
     setTimeout(() => {win.show()}, 10)
   })
@@ -285,6 +306,9 @@ const createWindow = () => {
 app.setAppLogsPath()
 app.whenReady().then(() => {
   win = createWindow()
+  nativeTheme.addListener('updated', () => {
+    win.webContents.send('App:NativeThemeChange', nativeTheme.shouldUseDarkColors)
+  })
   ipcMain.handle('App:ThemeChange', (_event, newTheme) => {
     nativeTheme.themeSource = newTheme
     config.theme = newTheme
@@ -298,11 +322,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle('Update:Start', async (_event, modpackId) => {
     log(`modpackId: ${modpackId}`)
+    const packConfig = packConfigs[modpackId]
+    updateModpack(modpackId)
     for(let i = 0; i <= 100; i++) {
       win.webContents.send('Update:Percent', modpackId, i)
       await delay(50)
     }
-    win.webContents.send('Update:Complete', modpackId, true)
+    packConfig.localVersion = packConfig.upstreamVersion
+    win.webContents.send('Update:Complete', modpackId, packConfig)
   })
 })
 

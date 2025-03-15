@@ -11,13 +11,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   ThemeChange: (newTheme) => ipcRenderer.invoke('App:ThemeChange', newTheme),
   DialogOpen: (options) => ipcRenderer.invoke('Dialog:Open', options),
-
+  
+  onNativeThemeChange: (callback) => ipcRenderer.on('App:NativeThemeChange', (_event, useDarkMode) => callback(useDarkMode)),
   onReady: (callback) => ipcRenderer.on('Ready', (_event) => callback()),
   onConfigRead: (callback) => ipcRenderer.on('App:ConfigRead', (_event, config) => callback(config)),
   onPackConfigRead: (callback) => ipcRenderer.on('Pack:ConfigsRead', (_event, configs) => callback(configs)),
 
-  onVersionDownloadError: (callback) => ipcRenderer.on('Error:VersionDownload', (_event, modpackId, err) => callback(err)),
-  onVersionReadError: (callback) => ipcRenderer.on('Error:VersionRead', (_event, modpackId, err) => callback(err)),
+  onVersionDownloadError: (callback) => ipcRenderer.on('Error:VersionDownload', (_event, modpackId, err) => callback(modpackId, err)),
+  onVersionReadError: (callback) => ipcRenderer.on('Error:VersionRead', (_event, modpackId, err) => callback(modpackId, err)),
 
   onUpdateCheckedFor: (callback) => ipcRenderer.on('Update:Response', (_event, modpackId, updateNeeded, versionData) => callback(modpackId, updateNeeded, versionData)),
   onUpdateProcessPercent: (callback) => ipcRenderer.on('Update:Percent', (_event, modpackId, value) => callback(modpackId, value)),

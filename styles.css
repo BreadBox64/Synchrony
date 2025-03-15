@@ -4,6 +4,7 @@
 	--secColor: #2c2c2c;
 	--terColor: #ebe6ff;
 	--quatColor: #dcd3ff;
+	--shadowColor: #2c2c2c20;
 }
 
 * {
@@ -14,12 +15,17 @@
 	transition: background-color 0.2s linear;
 }
 
-body {
-	height: 100%;
+::-webkit-scrollbar {
+  display: none;
 }
+
 
 html {
 	background-color: var(--mainColor);
+	height: 100%;
+}
+
+body {
 	height: 100%;
 }
 
@@ -31,24 +37,32 @@ html {
 
 #themeSwitch {
 	pointer-events: all;
-	position: absolute;
+	position: fixed;
 	color: var(--secColor);
 	user-select: none;
-	top: 8px;
+	bottom: 8px;
 	left: 8px;
+	z-index: 2;
+}
+
+#appTitle {
+	width: 100%;
+	color: var(--secColor);
+	position: fixed;
+	top: 0px;
+	text-align: center;
+	background-color: var(--terColor);
+	pointer-events: all;
+	z-index: 1;
+	box-shadow: 6px 6px 10px -1px var(--shadowColor);
 }
 
 #main {
 	width: 768px;
 	height: 100%;
 	margin: 0px auto;
-	padding: 8px 16px;
+	padding: 132px 16px 32px 16px;
 	background-color: var(--mainColor);
-
-	h1 {
-		color: var(--secColor);
-		pointer-events: all;
-	}
 }
 
 #modpackList>div {
@@ -69,8 +83,8 @@ html {
 		padding: 32px;
 		background-color: var(--terColor);
 		user-select: none;
-		box-shadow: 6px 6px 10px -1px rgba(0, 0, 0, 0.15);
-		text-shadow: 4px 4px 6px rgba(0, 0, 0, 0.15);
+		box-shadow: 6px 6px 10px -1px var(--shadowColor);
+		text-shadow: 4px 4px 6px var(--shadowColor);
 		border-radius: 16px;
 		transition: background-color 0.2s linear;
 	}
@@ -81,28 +95,60 @@ html {
 }
 
 .modpackContainer {
-	box-shadow: 6px 6px 10px -1px rgba(0, 0, 0, 0.15);
+	box-shadow: 6px 6px 10px -1px var(--shadowColor);
 	border-radius: 16px;
 	display: flex;
-	justify-content: center;
+	flex-direction: row;
 	align-items: center;
 	transition: background-color 0.2s linear;
 	pointer-events: all;
 }
 
-.content {
+.textElement {
 	color: var(--secColor);
 	display: flex;
 	justify-content: left;
 	align-items: center;
 	flex-direction: column;
-	text-shadow: 4px 4px 6px rgba(0, 0, 0, 0.15);
+	text-shadow: 4px 4px 6px var(--shadowColor);
+	text-align: center;
+	width: 100%;
+}
+
+.content {
+	box-shadow: inset 6px 6px 10px -1px var(--shadowColor);
+	margin: 16px;
+	padding: 16px;
+	border-radius: 16px;
+	border: 4px solid var(--secColor);
+
+	h1 {
+		font-size: 36px;
+	}
+	p {
+		opacity: 1;
+		transition: opacity 0.2s linear;
+		font-size: 12px;
+	}
+}
+
+.details {
+	h1 {
+		font-size: 18px;
+		font-weight: 700;
+	}
+	p {
+		opacity: 1;
+		transition: opacity 0.2s linear;
+		font-size: 28px;
+		font-weight: 300;
+	}
 }
 
 .loadingElement {
 	height: 160px;
 	width: 160px;
-	margin: 40px clamp(20px, 5.21%, 40px);
+	margin: 40px 40px;
 
 	.loadingElement-static {
 		width: 160px;
@@ -113,7 +159,7 @@ html {
 		width: 160px;
 		height: 160px;
 		padding: 20px;
-		box-shadow: 6px 6px 10px -1px rgba(0, 0, 0, 0.15);
+		box-shadow: 6px 6px 10px -1px var(--shadowColor);
 		background-color: transparent;
 		border-radius: 50%;
 	}
@@ -121,7 +167,7 @@ html {
 	.inner {
 		width: 120px;
 		height: 120px;
-		box-shadow: inset 4px 4px 6px -1px rgba(0, 0, 0, 0.15);
+		box-shadow: inset 4px 4px 6px -1px var(--shadowColor);
 		border-radius: 50%;
 		display: flex;
 		justify-content: center;
@@ -131,9 +177,9 @@ html {
 	span {
 		color: var(--secColor);
 		opacity: 0;
-		transition: opacity 0.6s;
+		transition: opacity 0.5s;
 		user-select: none;
-		text-shadow: 4px 4px 6px rgba(0, 0, 0, 0.15);
+		text-shadow: 4px 4px 6px var(--shadowColor);
 	}
 
 	svg {

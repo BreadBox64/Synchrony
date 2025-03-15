@@ -22,6 +22,7 @@
  * @property {?string} customGradient
  * @property {string} localBranch
  * @property {string} localVersion
+ * @property {string} upstreamVersion
  * @property {string} upstreamVersionURL
  * @property {string} upstreamChangelist
  */
@@ -29,7 +30,8 @@
 /**
  * @typedef dom
  * @type {object}
- * @property {HTMLElement} loading
+ * @property {HTMLElement} container
+ * @property {Element} loading
  * @property {Element} staticE
  * @property {Element} inner
  * @property {Element} symbol
@@ -37,6 +39,7 @@
  * @property {Element} circle
  * @property {Element} title
  * @property {Element} status
+ * @property {Element} details
  */
 
 /**

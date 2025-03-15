@@ -1,6 +1,6 @@
 import "./jsdoc.js"
 import { delay } from './utils.js'
-import { createModpackElement, updateElementTheme } from "./modpackElement.js"
+import { createModpackElement, updateElementDetails, updateElementTheme } from "./modpackElement.js"
 
 const electronAPI = window.electronAPI
 const root = document.querySelector(':root')
@@ -56,7 +56,7 @@ let displayConfigs = {}
  * @param {boolean} postt Fade in new symbol
 */
 async function setSymbolByState(modpackId, pret, postt) {
-	const { symbol, staticE } = dom[modpackId]
+	const { symbol, loading } = dom[modpackId]
 	if (pret) {
 		symbol.style.opacity = 0
 		await delay(600)
@@ -66,32 +66,33 @@ async function setSymbolByState(modpackId, pret, postt) {
 		case 'syncing':
 			symbol.className = "loadingElement-symbol material-symbols-outlined size-80 wght-7 spin"
 			symbol.innerText = "sync"
-			staticE.title = "Checking for updates..."
+			loading.title = ""
 			break
 		case 'postsync':
 		case 'presync':
 			symbol.innerText = "sync"
-			staticE.title = "Click to check for updates."
+			loading.title = "Click to check for updates."
 			break
 		case 'downloading':
-			symbol.innerText = ""
-			staticE.title = "Downloading..."
+			symbol.className = "loadingElement-symbol material-symbols-outlined size-80 wght-7 pulse"
+			symbol.innerText = "downloading"
+			loading.title = ""
 			break
 		case 'predownload':
 			symbol.innerText = "download"
-			staticE.title = "Click to download update."
+			loading.title = "Click to download update."
 			break
 		case 'postdownload':
 			symbol.innerText = "download_done"
-			staticE.title = "Update complete!"
+			loading.title = "Click to re-check for updates."
 			break
 		case 'failedsync':
 			symbol.innerText = "sync_problem"
-			staticE.title = "Sync error: check network connection."
+			loading.title = "Click to re-check for updates."
 			break
 		case 'faileddownload':
 			symbol.innerText = "error"
-			staticE.title = "Update error: check network connection."
+			loading.title = "Click to re-try update, Shift+Click to re-check for updates."
 			break
 	}
 	symbol.style.opacity = 1
@@ -111,22 +112,26 @@ function symbolClickHandlerFactory(modpackId) {
 		switch (states[modpackId]) {
 			case 'postdownload':
 			case 'failedsync':
+				updateElementDetails(dom[modpackId], null, "Checking Online for Updates...")
 				states[modpackId] = 'syncing'
 				setSymbolByState(modpackId, true, true)
 				electronAPI.checkForUpdate(modpackId)
 				break;
 			case 'postsync':
 			case 'presync':
+				updateElementDetails(dom[modpackId], null, "Checking Online for Updates...")
 				states[modpackId] = 'syncing'
 				setSymbolByState(modpackId, false, true)
 				electronAPI.checkForUpdate(modpackId)
 				break;
 			case 'faileddownload':
 				if (pressedKeys[16]) { // resync
+					updateElementDetails(dom[modpackId], null, "Checking Online for Updates...")
 					states[modpackId] = 'syncing'
 					setSymbolByState(modpackId, true, true)
 					electronAPI.checkForUpdate(modpackId)
 				} else { // download
+					updateElementDetails(dom[modpackId], null, "Downloading Updates...")
 					electronAPI.startProcess(modpackId)
 					states[modpackId] = 'downloading'
 					setSymbolByState(modpackId, true, false)
@@ -134,6 +139,7 @@ function symbolClickHandlerFactory(modpackId) {
 				break;
 			case 'predownload':
 				electronAPI.startProcess(modpackId)
+				updateElementDetails(dom[modpackId], null, "Downloading Updates...")
 				states[modpackId] = 'downloading'
 				setSymbolByState(modpackId, true, false)
 				break
@@ -159,6 +165,7 @@ function getModpackElements(modpackId) {
 		circle: modpackContainer.getElementsByClassName('loadingElement-circle')[0],
 		title: modpackContainer.getElementsByClassName('content-title')[0],
 		status: modpackContainer.getElementsByClassName('content-status')[0],
+		details: modpackContainer.getElementsByClassName('details')[0]
 	}
 
 	return elements
@@ -208,6 +215,11 @@ themeSwitch.addEventListener('click', async () => {
 	const useDarkMode = await electronAPI.ThemeChange(currentTheme)
 	setTheme(useDarkMode)
 })
+
+electronAPI.onNativeThemeChange((useDarkMode) => {
+	if(currentTheme === 'system') setTheme(useDarkMode)
+})
+
 /* #endregion */
 
 /* #region  Startup */
@@ -287,32 +299,34 @@ electronAPI.onPackConfigRead((packConfigs) => {
 	
 	setupModpackAdd()
 	
-	for (const [id, config] of Object.entries(packConfigs)) {
+	for(const [id, config] of Object.entries(packConfigs)) {
 		addModpack(id, config)
+		states[id] = 'syncing'
+		setSymbolByState(id, false, false)
 	}
 })
 /* #endregion */
 
 /* #region  Errors */
-electronAPI.onVersionDownloadError((modpackId) => {
-	console.error(`VersionReadError for modpack: ${modpackId}`)
+electronAPI.onVersionDownloadError((modpackId, err) => {
+	console.warn(`VersionDownloadError for modpack ${modpackId}:`, err)
+	updateElementDetails(dom[modpackId], configs[modpackId], `Failed: ${(err == 'Timed Out') ? "Request Timed Out" : "VersionDownloadError"}`)
 	states[modpackId] = "failedsync"
 	setSymbolByState(modpackId, true, true)
 })
 
-electronAPI.onVersionReadError((modpackId) => {
-	console.error(`VersionReadError for modpack: ${modpackId}`)
+electronAPI.onVersionReadError((modpackId, _err) => {
+	console.warn(`VersionReadError for modpack: ${modpackId}`)
+	updateElementDetails(dom[modpackId], configs[modpackId], 'Failed: VersionReadError')
 	states[modpackId] = "failedsync"
 	setSymbolByState(modpackId, true, true)
 })
 /* #endregion */
 
 /* #region  Response Handlers */
-electronAPI.onUpdateCheckedFor((modpackId, updateNeeded, versionData) => {
+electronAPI.onUpdateCheckedFor((modpackId, updateNeeded, config) => {
 	console.log("Recieved UpdateCheck Response")
-	dom[modpackId].status.innerText = updateNeeded ?
-		`An update is needed from version ${versionData.local.str} to ${versionData.upstream.str}` :
-		`No update is needed, version ${versionData.local.str} is up to date!`
+	updateElementDetails(dom[modpackId], config, updateNeeded ? 'A Modpack Update is Needed' : 'Modpack is Up-To-Date')
 	states[modpackId] = updateNeeded ? 'predownload' : 'postdownload'
 	setSymbolByState(modpackId, true, true)
 })
@@ -321,7 +335,8 @@ electronAPI.onUpdateProcessPercent((modpackId, percent) => {
 	root.style.setProperty(`--loadValue-${modpackId}`, `${440 - (percent * 4.4)}px`)
 })
 
-electronAPI.onUpdateProcessComplete(async (modpackId, value) => {
+electronAPI.onUpdateProcessComplete(async (modpackId, config) => {
+	updateElementDetails(dom[modpackId], config, 'Update Completed!')
 	states[modpackId] = 'postdownload'
 	const svg = dom[modpackId].svg
 	svg.style.opacity = 0
