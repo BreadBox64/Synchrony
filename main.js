@@ -1,8 +1,11 @@
-const {log, debug, error, timeEnd} = require('node:console'); 
+const {log, debug, error, warn} = require('node:console'); 
 const { randomInt } = require('node:crypto');
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const path = require('node:path')
+const util = require('node:util')
+const {Worker, MessageChannel, MessagePort, isMainThread, parentPort} = require('node:worker_threads');
+require('./jsdoc.js')
 
 const { app, BrowserWindow, dialog, ipcMain, nativeTheme } = require('electron/main');
 const { DownloaderHelper } = require('node-downloader-helper');
@@ -94,62 +97,194 @@ if (handleSquirrelEvent()) {
 
 const configPath = path.join(app.getPath('userData'), 'synchronyConfig')
 const sessionPath = app.getPath('sessionData')
-let modpackPath = path.join(app.getPath('documents'), 'synchrony-modpack') // ============================================
+/** @type {config} */
 let config = {}
+/** @type {Object.<string, packConfig>} */
 let packConfigs = {}
 const versionRegex = /(\d+)\.(\d+)\.(\d+)(?:-([b|n])(\d+))?/;
 let win;
 
 /**
  * 
- * @param {string} changelist 
+ * @param {string} id 
+ * @param {packConfig} packConfig 
+ * @returns 
  */
-function compileChanges(changelist) {
-  log(changelist)
+
+async function getChangelist(id, packConfig) {
+  const promise = new Promise(resolve => {
+    win.webContents.send('Update:Percent', id, 5)
+    const changelistDownloadErrorHandler = (e) => {
+      warn(e)
+      win.webContents.send('Error:ChangelistDownload', id, e)
+      resolve(null)
+    }
+    
+    try {
+      const dl = new DownloaderHelper(packConfig.upstreamChangelist, sessionPath, {
+        fileName: `upstreamChangelist:${id}`,
+        override: true,
+        retry: {maxRetries: 5, delay: 1000}
+      });
+      
+      dl.on('end', () => {
+        debug("Downloaded changelist file.")
+        let changelist
+        changelist = fs.readFileSync(path.join(sessionPath, `upstreamChangelist:${id}`), 'utf8').trim().split('\n');
+        win.webContents.send('Update:Percent', id, 15)
+        resolve(changelist)
+      });
+      dl.on('error', changelistDownloadErrorHandler)
+      dl.start().catch(changelistDownloadErrorHandler)
+      win.webContents.send('Update:Percent', id, 10)
+    } catch(e) {
+      changelistDownloadErrorHandler(e)
+    }
+  })
+  return promise
+}
+
+function findVersionRoute(versionPairs, startingVersion, targetVersion, route) {
+  const layer = versionPairs.filter(key => (key[0] == startingVersion))
+  let set = []
+  for(const pair of layer) {
+    if(pair[1] == targetVersion) return [...route, startingVersion] 
+    set.push(findVersionRoute(versionPairs, pair[1], targetVersion, [...route, startingVersion]))
+  }
+  if(set.length == 0) return null
+  let shortest = set[0]
+  for(const route of set) {
+    if(route.length < shortest.length) shortest = route
+  }
+  return shortest
 }
 
 /**
  * 
- * @param {string} modpackId 
- * @returns {null}
+ * @param {string[]} changelist 
+ * @param {string} oldVersion 
+ * @param {string} newVersion 
  */
-async function updateModpack(modpackId) {
-  let errorCond = false
-  /** @type {string} */
-  let upstreamChangelistFile
-  let changeDesc, changes
-
+function compileChanges(id, changelist, oldVersion, newVersion) {
   try {
-    let dl = new DownloaderHelper(packConfig.upstreamVersion, sessionPath, {
-      fileName: 'upstreamChangelist',
-      override: true,
-      retry: {maxRetries: 5, delay: 1000}
-    });
-    dl.on('end', () => {
-      debug("Downloaded changelist file.")
-      try {
-        upstreamChangelistFile = fs.readFileSync(path.join(sessionPath, 'upstreamChangelist'), 'utf8').split('\n');
-      } catch(e) {error(e); errorCond = true}
-    });
-    dl.on('error', (e) => {error(e); errorCond = true});
-    dl.start().catch(() => {error(e); errorCond = true});
-  } catch(e) {error(e); errorCond = true}
-  if(errorCond) {
-    win.webContents.send('Error:ChangelistDownload', e)
-    return
+    let currentHeader = ''
+    let changeStructure = {}
+    changelist.forEach(line => {
+      if(/^\d+$/.test(line[0])) { // Is the first char of current line numberic?
+        currentHeader = line
+        changeStructure[line] = []
+      } else {
+        changeStructure[currentHeader].push(line)
+      }
+    })
+    win.webContents.send('Update:Percent', id, 20)
+
+
+    // TODO Can have dependent version changes i.e. pack-client automatically includes all changes in pack-server
+    // 1.0.0-c -> 1.1.0-c
+    // > 1.0.0-s -> 1.1.0-s
+    // + extra changes
+    let changes = []
+    if(changeStructure[`${oldVersion} -> ${newVersion}`] != undefined) {
+      changes = changeStructure[`${oldVersion} -> ${newVersion}`] 
+    } else {
+      const versionPairs = Object.keys(changeStructure).map(key => key.split(' -> '))
+      win.webContents.send('Update:Percent', id, 25)
+      const versionRoute = [...findVersionRoute(versionPairs, oldVersion, newVersion, []), newVersion]
+      win.webContents.send('Update:Percent', id, 30)
+      //log(util.inspect(versionRoute, false, null, true /* enable colors */))
+      
+      for(let i = 0; i < versionRoute.length - 1; i++) {
+        //log(`${i} : ${versionRoute[i]}`)
+        changes = [...changes, ...changeStructure[`${versionRoute[i]} -> ${versionRoute[i+1]}`]]
+      }
+    }
+    win.webContents.send('Update:Percent', id, 35)
+
+    return changes
+  } catch(e) {
+    win.webContents.send('Error:ChangelistCompile', id, e)
+    error(e)
+    return null
   }
+}
 
-  try {
-    [changeDesc, changes] = compileChanges(upstreamChangelistFile)
-  } catch(e) {error(e); errorCond = true; win.webContents.send('Error:ChangelistCompile', e)}
-  log(changeDesc)
-  log(changes)
-  return
+/**
+ * 
+ * @param {string} id 
+ * @param {string[]} changes 
+ * @returns {changeObject}
+ */
+function parseChanges(id, changes) {
+  win.webContents.send('Update:Percent', id, 40)
+  let parsedDownloads = []
+  let j = 0
+  let errorCond = false
+  let parsedChanges = changes.map((change) => {
+    try {
+      let args = []
 
+      let currentArg = ''
+      let insideString = false
+      for(let i = 0; i < change.length; i++) {
+        const c = change[i]
+        if(c === '`') {
+          insideString = !insideString
+        } else if(c === ' ' && !insideString) {
+          args.push(currentArg)
+          currentArg = ''
+        } else {
+          currentArg += c
+        }
+      }
+      args.push(currentArg)
+
+      switch(args[0]) {
+        case '?':
+          args[2] = args[2].split(';')
+          break
+        case '+':
+          parsedDownloads.push([`cache:${id}:${args[1]}`, args.splice(4, args.length - 5, `cache:${id}:${args[1]}`)])
+          break
+        case '*':
+          args[3] = args[3].split(';').map(lineNum => {return parseInt(lineNum)})
+        case '^':
+          const replacements = args.splice(4, args.length - 6)
+          args.splice(4, 0, replacements)
+          break
+      }
+
+      win.webContents.send('Update:Percent', id, 10 * (j/changes.length) + 40)
+      j++
+      return args
+    } catch(e) {
+      error(e)
+      errorCond = true
+    }
+  })
+
+  if(errorCond) {
+    win.webContents.send('Error:ChangelistParse', id, e)
+    return null
+  } else {
+    return {
+      downloads: parsedDownloads,
+      changes: parsedChanges
+    }
+  }
+}
+
+/**
+ * 
+ * @param {changeObject} changes 
+ */
+async function multiThreadProcessChanges(id, changes) {
+  /*
+  let errorCond = false
   let workers = []
   let activeWorkers = 0
-  for(let i = min(config.maxWorkers, changes.length); i > 0; i--) {
-    let worker = new Worker('changeWorker.js', {name: `ChangeWorker${i}`})
+  for(let i = Math.min(config.maxWorkers, changes.length); i > 0; i--) {
+    let worker = new Worker('./changeWorker.js', {name: `ChangeWorker${i}`})
     activeWorkers += 1
     worker.onmessage = (msg) => {
       switch(msg[0]) {
@@ -159,7 +294,7 @@ async function updateModpack(modpackId) {
         case 'fatal':
           errorCond = true
         case 'error':
-          error(msg[2])
+          warn(msg[2])
           break
         case 'term':
           worker.terminate()
@@ -177,13 +312,102 @@ async function updateModpack(modpackId) {
     workers.push(worker)
   }
 
-  await new Promise(resolve => {if((activeWorkers === 0 && changes.length === 0) || errorCond) {resolve()}})
+  while(!(activeWorkers === 0 && changes.length === 0) || !errorCond) {
+    win.webContents.send('Update:Percent', id, 80 * (changes.length / changeNum) + 20)
+    await delay(100)
+  }
   
   if(errorCond) {
     workers.forEach(worker => worker.terminate())
     win.webContents.send('Update:Failed', true)
   } else {
     win.webContents.send('Update:Complete', true)
+  }
+  */
+}
+
+/**
+ * 
+ * @param {changeObject} changes 
+ */
+async function processChanges(id, changes) {
+  try {
+    const numChanges = changes.changes.length
+    for(let i = 0; i < numChanges; i++) {
+      const change = changes.changes[i]
+      switch(change[0]) {
+        case '>': {
+          const [_arg, version] = change
+          break
+          }
+        case '?': {
+          const [_arg, prompt, ids] = change
+          break
+          }
+        case '/': {
+          const [_arg, comment] = change
+          break
+          }
+        case '\\': {
+          const [_arg, comment] = change
+          log('\\ found')
+          break
+          }
+        case '+': {
+          const [_arg, id, path, decompress, cache, comment] = change
+          break
+          }
+        case '-': {
+          const [_arg, id, path, comment] = change
+          break
+          }
+        case '*': {
+          const [_arg, id, path, lineNums, replacements, comment] = change
+          break
+          }
+        case '^': {
+          const [_arg, id, path, regexPattern, replacements, comment] = change
+          break
+          }
+      }
+      await delay(100)
+      win.webContents.send('Update:Percent', id, 50 * (i/numChanges) + 50)
+    }
+    return true
+  } catch(e) {
+    error(e)
+    return false
+  }
+}
+
+/**
+ * 
+ * @param {string} id modpackId
+ * @returns {null}
+ */
+async function updateModpack(id) {
+  const packConfig = packConfigs[id]
+
+  /** @type {string[]} */
+  const changelist = await getChangelist(id, packConfig)
+  if(changelist == null) {log('changelist is null'); return}
+  await delay(500)
+
+  const changes = compileChanges(id, changelist, packConfig.localVersion, packConfig.upstreamVersion)
+  if(changes == null) {log('changes is null'); return}
+  await delay(500)
+
+  const parsedChanges = parseChanges(id, changes)
+  if(parsedChanges == null) {log('parsedChanges is null'); return}
+  await delay(500)
+
+  const result = await processChanges(id, parsedChanges)
+  win.webContents.send('Update:Percent', id, 100)
+  await delay(10)
+  if(result) {
+    win.webContents.send('Update:Complete', id)
+  } else {
+    win.webContents.send('Update:Failed', id, 'idk why')
   }
 }
 
@@ -321,15 +545,7 @@ app.whenReady().then(() => {
   ipcMain.handle('Update:Check', (_event, modpackId) => checkForUpdates(packConfigs[modpackId]))
 
   ipcMain.handle('Update:Start', async (_event, modpackId) => {
-    log(`modpackId: ${modpackId}`)
-    const packConfig = packConfigs[modpackId]
     updateModpack(modpackId)
-    for(let i = 0; i <= 100; i++) {
-      win.webContents.send('Update:Percent', modpackId, i)
-      await delay(50)
-    }
-    packConfig.localVersion = packConfig.upstreamVersion
-    win.webContents.send('Update:Complete', modpackId, packConfig)
   })
 })
 

@@ -1,4 +1,5 @@
 const {log, debug, error, fs, fsp, path, app, dialog} = global.moduleExport
+import './jsdoc.js'
 
 async function handleFileOpen(options) {
 	const { canceled, filePaths } = await dialog.showOpenDialog(options)
@@ -7,6 +8,11 @@ async function handleFileOpen(options) {
 	}
 }
 
+/**
+ * 
+ * @param {string} path 
+ * @returns {[boolean, packConfig|Error]}
+ */
 function loadPackConfig(path) {
   let newPackConfig = {}
   let configString
@@ -14,7 +20,7 @@ function loadPackConfig(path) {
     configString = fs.readFileSync(path, 'utf-8').trim()
   } catch(e) {
     error(e)
-    return [false, null]
+    return [false, e]
   }
 
   configString.split('\n').forEach((line) => {
@@ -29,6 +35,11 @@ function loadPackConfig(path) {
   return [true, newPackConfig]
 }
 
+/**
+ * 
+ * @param {string[]} packList 
+ * @returns {Object.<string, packConfig>}
+ */
 function loadPackConfigs(packList) {
   let configs = {}
   try {
@@ -46,16 +57,7 @@ function savePackConfig(path, config) {
 
 async function newPackConfig() {
   let path = ""
-  const {response} = await dialog.showMessageBox({
-    type: "question",
-    message: "How do you want to add a modpack?",
-    buttons: [
-      "Create New Modpack",
-      "Add Existing Modpack",
-      "Cancel"
-    ],
-    cancelId: 2
-  })
+  
 
   return path
 }
@@ -68,6 +70,11 @@ const defaultConfig = {
   theme: 'system'
 }
 
+/**
+ * 
+ * @param {string} path 
+ * @returns {[boolean, config|Error]}
+ */
 function loadConfig(path) {
   let newConfig = {}
   let configArray

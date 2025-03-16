@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   onVersionDownloadError: (callback) => ipcRenderer.on('Error:VersionDownload', (_event, modpackId, err) => callback(modpackId, err)),
   onVersionReadError: (callback) => ipcRenderer.on('Error:VersionRead', (_event, modpackId, err) => callback(modpackId, err)),
+  onChangelistDownloadError: (callback) => ipcRenderer.on('Error:ChangelistDownload', (_event, modpackId, err) => callback(modpackId, err)),
+  onChangelistCompileError: (callback) => ipcRenderer.on('Error:ChangelistCompile', (_event, modpackId, err) => callback(modpackId, err)),
+  onChangelistParseError: (callback) => ipcRenderer.on('Error:ChangelistParse', (_event, modpackId, err) => callback(modpackId, err)),
 
   onUpdateCheckedFor: (callback) => ipcRenderer.on('Update:Response', (_event, modpackId, updateNeeded, versionData) => callback(modpackId, updateNeeded, versionData)),
   onUpdateProcessPercent: (callback) => ipcRenderer.on('Update:Percent', (_event, modpackId, value) => callback(modpackId, value)),

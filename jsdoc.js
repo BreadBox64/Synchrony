@@ -1,15 +1,10 @@
 /**
  * @typedef config
  * @type {object}
- * @property {string} id
- * @property {string} name
- * @property {?string} description
- * @property {?string} customColorSet
- * @property {?string} customGradient
- * @property {string} localBranch
- * @property {string} localVersion
- * @property {string} upstreamVersionURL
- * @property {string} upstreamChangelist
+ * @property {string} synchronyVersion
+ * @property {string} packConfigs
+ * @property {number} maxWorkers
+ * @property {string} theme
  */
 
 /**
@@ -47,4 +42,11 @@
  * @type {object}
  * @property {[string, string]} gradient
  * @property {[string, string, string, string, string]} colors
+ */
+
+/**
+ * @typedef changeObject
+ * @type {object}
+ * @property {[string, string][]} downloads
+ * @property {(string|string[])[][]} changes
  */

@@ -3,7 +3,7 @@ import {delay} from './utils.js'
 
 /**
  * Create a modpack HTML element
- * @param {config} config 
+ * @param {packConfig} config 
  * @param {displayConfig} displayConfig 
  * @returns {string} New element outerHTML
  */
@@ -65,7 +65,7 @@ export function updateElementTheme(id, root, displayConfig, useDarkMode) {
 /**
  * 
  * @param {dom} dom 
- * @param {config} config 
+ * @param {packConfig} config 
  */
 export async function updateElementDetails(dom, config, statusText) {
 	const elements = dom.details.getElementsByTagName('p')

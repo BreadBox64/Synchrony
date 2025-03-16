@@ -1,4 +1,5 @@
-const {DownloaderHelper} = require('node-downloader-helper');
+import { DownloaderHelper } from 'node-downloader-helper';
+import { delay } from './utils';
 
 function downloadFile(url, path, modId) {
 	try {
@@ -12,7 +13,7 @@ function downloadFile(url, path, modId) {
 	}
 }
 
-function startExecute(change) {
+async function startExecute(change) {
 	let args = []
 
 	let currentArg = ''
@@ -46,6 +47,9 @@ function startExecute(change) {
 		case '^':
 			break
 	}
+
+	await delay(100)
+	postMessage(['complete'])
 }
 
 onmessage = (e) => {

@@ -38,7 +38,7 @@ const transitionEnd = (() => {
 	}
 })()
 
-/** @type {Object.<string, config>} */
+/** @type {Object.<string, packConfig>} */
 let configs = {}
 /** @type {Object.<string, dom>} */
 let dom = {}
@@ -170,6 +170,22 @@ function getModpackElements(modpackId) {
 
 	return elements
 }
+
+/**
+ * 
+ * @param {string} modpackId 
+ */
+function clearLoadingProgress(modpackId) {
+	const svg = dom[modpackId].svg
+	svg.style.opacity = 0
+	setSymbolByState(modpackId, true, true)
+	svg.addEventListener(transitionEnd, async () => {
+		await delay(600)
+		root.style.setProperty(`--loadValue-${modpackId}`, '440px')
+		await delay(1000)
+		svg.style.opacity = 1
+	}, { once: true })
+}
 /* #endregion */
 
 /* #region  Themes */
@@ -225,7 +241,7 @@ electronAPI.onNativeThemeChange((useDarkMode) => {
 /* #region  Startup */
 /**
  * 
- * @param {config} modpackConfig 
+ * @param {packConfig} modpackConfig 
  * @returns {displayConfig}
 */
 function generateDisplayConfig(modpackConfig) {
@@ -240,7 +256,7 @@ function generateDisplayConfig(modpackConfig) {
 /**
  * 
  * @param {string} id 
- * @param {config} packConfig 
+ * @param {packConfig} packConfig 
  */
 function addModpack(id, packConfig) {
 	configs[id] = packConfig
@@ -321,11 +337,36 @@ electronAPI.onVersionReadError((modpackId, _err) => {
 	states[modpackId] = "failedsync"
 	setSymbolByState(modpackId, true, true)
 })
+
+electronAPI.onChangelistDownloadError((modpackId, _err) => {
+	console.warn(`ChangelistDownloadError for modpack ${modpackId}`)
+	updateElementDetails(dom[modpackId], null, "Failed: ChangelistDownloadError")
+	states[modpackId] = "faileddownload"
+	setSymbolByState(modpackId, true, true)
+	clearLoadingProgress(modpackId)
+})
+
+electronAPI.onChangelistCompileError((modpackId, _err) => {
+	console.warn(`ChangelistCompileError for modpack: ${modpackId}`)
+	updateElementDetails(dom[modpackId], null, "Failed: ChangelistCompileError")
+	states[modpackId] = "faileddownload"
+	setSymbolByState(modpackId, true, true)
+	clearLoadingProgress(modpackId)
+})
+
+electronAPI.onChangelistParseError((modpackId, _err) => {
+	console.warn(`ChangelistParseError for modpack: ${modpackId}`)
+	updateElementDetails(dom[modpackId], null, "Failed: ChangelistParseError")
+	states[modpackId] = "faileddownload"
+	setSymbolByState(modpackId, true, true)
+	clearLoadingProgress(modpackId)
+})
 /* #endregion */
 
 /* #region  Response Handlers */
 electronAPI.onUpdateCheckedFor((modpackId, updateNeeded, config) => {
 	console.log("Recieved UpdateCheck Response")
+	configs[modpackId] = config
 	updateElementDetails(dom[modpackId], config, updateNeeded ? 'A Modpack Update is Needed' : 'Modpack is Up-To-Date')
 	states[modpackId] = updateNeeded ? 'predownload' : 'postdownload'
 	setSymbolByState(modpackId, true, true)
@@ -338,15 +379,15 @@ electronAPI.onUpdateProcessPercent((modpackId, percent) => {
 electronAPI.onUpdateProcessComplete(async (modpackId, config) => {
 	updateElementDetails(dom[modpackId], config, 'Update Completed!')
 	states[modpackId] = 'postdownload'
-	const svg = dom[modpackId].svg
-	svg.style.opacity = 0
+	clearLoadingProgress(modpackId)
+})
+
+electronAPI.onUpdateProcessFailed((modpackId, reason) => {
+	console.warn(`Update failed for modpack: ${modpackId} with reason: ${reason}`)
+	updateElementDetails(dom[modpackId], null, "Update Failed.")
+	states[modpackId] = "faileddownload"
 	setSymbolByState(modpackId, true, true)
-	svg.addEventListener(transitionEnd, async () => {
-		await delay(600)
-		root.style.setProperty(`--loadValue-${modpackId}`, '440px')
-		await delay(1000)
-		svg.style.opacity = 1
-	}, { once: true })
+	clearLoadingProgress(modpackId)
 })
 /* #endregion */
 
