@@ -17,7 +17,7 @@ function loadPackConfig(path) {
   let newPackConfig = {}
   let configString
   try {
-    configString = fs.readFileSync(path, 'utf-8').trim()
+    configString = fs.readFileSync(path, 'utf-8').replace(/\r\n/g,'\n').trim()
   } catch(e) {
     error(e)
     return [false, e]

@@ -35,7 +35,7 @@ export function createModpackElement(config, displayConfig) {
 			</div>
 		</div>
 		<div class="textElement content">
-			<h1 class="nunito-sans content-title">Modpack Title</h1>
+			<h1 class="nunito-sans content-title">${config.name}</h1>
 			<p class="nunito-sans content-status">Checking Online for Updates...</p>
 		</div>
 		<div class="textElement details">
