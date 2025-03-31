@@ -15,6 +15,7 @@ const addButtons = {
 	url: modpackAdd.children.item(2)
 }
 const themeSwitch = document.getElementById('themeSwitch')
+const promptBackground = document.getElementById('promptBackground')
 let currentTheme = 'system'
 
 const pressedKeys = {};
@@ -153,7 +154,9 @@ function symbolClickHandlerFactory(modpackId) {
  * @returns 
 */
 function getModpackElements(modpackId) {
+	console.log(modpackId)
 	const modpackContainer = document.getElementById(`modpack-${modpackId}`)
+	console.log(modpackContainer)
 	/** @type {dom} */
 	const elements = {
 		container: modpackContainer,
@@ -297,16 +300,16 @@ function setupModpackAdd() {
 		if(status) addModpack(data.id, data)
 	})
 	addButtons.url.addEventListener('click', async () => {
-		const [status, data] = await electronAPI.AddPack('url', 'https://www.example.com')
-		if(status) addModpack(data.id, data)
+		await displayUserPrompt()
+		//const [status, data] = await electronAPI.AddPack('url', 'https://www.example.com')
+		//if(status) addModpack(data.id, data)
 	})
 }
 
 electronAPI.onConfigRead(async (config) => {
 	currentTheme = config.theme
 	const useDarkMode = await electronAPI.ThemeChange(currentTheme)
-	console.log(useDarkMode)
-	console.log(currentTheme)
+	console.log(`Theme: ${currentTheme} | Use Dark Mode: ${useDarkMode}`)
 	setTheme(useDarkMode)
 })
 
@@ -389,6 +392,30 @@ electronAPI.onUpdateProcessFailed((modpackId, reason) => {
 	setSymbolByState(modpackId, true, true)
 	clearLoadingProgress(modpackId)
 })
+
+async function displayUserPrompt() {
+	promptBackground.innerHTML = `
+		<h1 class="josefin-sans hcenter">Add A Modpack</h1>
+		<input type="text">
+		<div class="hflex" style="height:96px padding">
+			<button id="promptSubmit">Ok</button>
+			<button id="promptCancel">Cancel</button>
+		</div>
+	`
+	const submitBtn = document.getElementById('promptSubmit')
+	const cancelBtn = document.getElementById('promptCancel')
+	promptBackground.style.display = 'flex'
+	await delay(1)
+	promptBackground.style.opacity = 1
+	await delay(200)
+	submitBtn.addEventListener('click', async () => {
+		promptBackground.style.opacity = 0
+		await delay(200)
+		promptBackground.style.display = 'none'
+	}, {once: true})
+} 
+
+//electronAPI.onUserPrompt(() => {})
 /* #endregion */
 
 //state = "syncing"
