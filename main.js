@@ -507,6 +507,7 @@ const createWindow = () => {
     show: false,
     autoHideMenuBar: true,
     title: "Synchrony",
+    icon: './resources/icon/icon64.png'
   })
 
   win.setMinimumSize(800, 600)

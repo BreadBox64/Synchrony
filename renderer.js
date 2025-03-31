@@ -6,6 +6,7 @@ const electronAPI = window.electronAPI
 const root = document.querySelector(':root')
 const modpackList = document.getElementById('modpackList')
 const modpackAdd = document.getElementById('modpackAdd')
+const promptBackground = document.getElementById('promptBackground')
 const addButtons = {
 	/** @type {!Element} */
 	existing: modpackAdd.children.item(0),
@@ -239,6 +240,14 @@ electronAPI.onNativeThemeChange((useDarkMode) => {
 	if(currentTheme === 'system') setTheme(useDarkMode)
 })
 
+/* #endregion */
+
+/* #region  Prompts */
+promptBackground.addEventListener('click', async () => {
+	promptBackground.style.opacity = 0
+	await delay(200)
+	promptBackground.style.display = 'none'
+})
 /* #endregion */
 
 /* #region  Startup */
