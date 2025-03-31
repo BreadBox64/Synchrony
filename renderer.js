@@ -16,7 +16,6 @@ const addButtons = {
 	url: modpackAdd.children.item(2)
 }
 const themeSwitch = document.getElementById('themeSwitch')
-const promptBackground = document.getElementById('promptBackground')
 let currentTheme = 'system'
 
 const pressedKeys = {};
