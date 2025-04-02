@@ -154,9 +154,9 @@ function symbolClickHandlerFactory(modpackId) {
  * @returns 
 */
 function getModpackElements(modpackId) {
-	console.log(modpackId)
+	//console.log(modpackId)
 	const modpackContainer = document.getElementById(`modpack-${modpackId}`)
-	console.log(modpackContainer)
+	//console.log(modpackContainer)
 	/** @type {dom} */
 	const elements = {
 		container: modpackContainer,
@@ -197,13 +197,15 @@ const themes = {
 		['--mainColor', '#ffffff'],
 		['--secColor', '#2c2c2c'],
 		['--terColor', '#ebe6ff'],
-		['--quatColor', '#dcd3ff']
+		['--quatColor', '#dcd3ff'],
+		['--shadowColor', '#2c2c2c20']
 	],
 	dark: [
 		['--mainColor', '#2c2c2c'],
 		['--secColor', '#ffffff'],
 		['--terColor', '#49445b'],
-		['--quatColor', '#413d4f']
+		['--quatColor', '#413d4f'],
+		['--shadowColor', '#0000003a']
 	]
 }
 
@@ -242,11 +244,60 @@ electronAPI.onNativeThemeChange((useDarkMode) => {
 /* #endregion */
 
 /* #region  Prompts */
-promptBackground.addEventListener('click', async () => {
-	promptBackground.style.opacity = 0
-	await delay(200)
-	promptBackground.style.display = 'none'
-})
+/**
+ * Displays prompt to user with given HTML as content. Returns user response according to dataShape
+ * @param {Object<string, string>} dataShape 
+ * @param {string} innerHTML 
+ * @param {Function} validate Predicate to confirm data is valid before closing prompt
+ */
+async function displayUserPrompt(innerHTML, dataShape, validate, handleInvalid, reset) {
+	return new Promise(async (resolve) => {
+		promptBackground.innerHTML = innerHTML
+		promptBackground.style.top = '124px'
+		await delay(600)
+
+		const submitButton = document.getElementById('promptSubmit')
+
+		const closePrompt = () => {
+			promptBackground.style.top = '100%'
+		}
+		const submit = async () => {
+			const outData = Object.fromEntries(
+				Object.entries(dataShape).map(([key, elementID]) => {
+					/** @type {HTMLInputElement} */
+					const element = document.getElementById(elementID)
+					let data
+					switch(element.type) {
+						default:
+							data = element.value
+						break;
+					}
+
+					return [key, data]
+				})
+			)
+			
+			if(validate(outData)) {
+				reset()
+				closePrompt()
+				submitButton.removeEventListener('click', submit)
+				resolve(outData)
+			}
+		}
+		const confirm = async () => {
+			closePrompt()
+			resolve(true)
+		}
+		const cancel = async () => {
+			closePrompt()
+			resolve(false)
+		}
+
+		submitButton?.addEventListener('click', submit)
+		document.getElementById('promptConfirm')?.addEventListener('click', confirm, {once: true})
+		document.getElementById('promptCancel').addEventListener('click', cancel, {once: true})
+	})
+}
 /* #endregion */
 
 /* #region  Startup */
@@ -308,9 +359,43 @@ function setupModpackAdd() {
 		if(status) addModpack(data.id, data)
 	})
 	addButtons.url.addEventListener('click', async () => {
-		await displayUserPrompt()
-		//const [status, data] = await electronAPI.AddPack('url', 'https://www.example.com')
-		//if(status) addModpack(data.id, data)
+		const addData = await displayUserPrompt(`
+				<div class="vflex hcenter">
+					<h1 class="josefin-sans hcenter">Add A Modpack</h1>
+					<br>
+					<input id="promptUrl" class="hcenter josefin-sans" type="text" placeholder="URL of Modpack to Add" style="font-size:24px">
+					<p id="promptError" class="josefin-sans" style="font-size:16px; color: red; height:16px"></p>
+					<div class="hflex hcenter" style="height:96px;width: min-content;">
+						<button id="promptSubmit" class="" style="width:192px;">
+							<h2 class="josefin-sans">Ok</h2>
+						</button>
+						<p></p>
+						<button id="promptCancel" class="" style="width:192px;">
+							<h2 class="josefin-sans">Cancel</h2>
+						</button>
+					</div>
+				</div>
+			`,
+			{
+				url: 'promptUrl'
+			},
+			async (promptData) => {
+				if(!promptData.url.trim().match(/^(?:https?:\/\/)?(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$/)) {
+					document.getElementById('promptError').innerText = "Adding Modpack Failed: Invalid URL!"
+					return false
+				}
+				const [status, data] = [false, 'idk']
+				//const [status, data] = await electronAPI.AddPack('url', data.url.trim())
+				if(status) {
+					addModpack(data.id, data)
+				} else {
+					document.getElementById('promptError').innerText = `Adding Modpack Failed: ${data}`
+					return false
+				}
+			},
+			(_) => {document.getElementById('promptError').innerText = "";}
+		)
+		console.log(addData)
 	})
 }
 
@@ -400,28 +485,6 @@ electronAPI.onUpdateProcessFailed((modpackId, reason) => {
 	setSymbolByState(modpackId, true, true)
 	clearLoadingProgress(modpackId)
 })
-
-async function displayUserPrompt() {
-	promptBackground.innerHTML = `
-		<h1 class="josefin-sans hcenter">Add A Modpack</h1>
-		<input type="text">
-		<div class="hflex" style="height:96px padding">
-			<button id="promptSubmit">Ok</button>
-			<button id="promptCancel">Cancel</button>
-		</div>
-	`
-	const submitBtn = document.getElementById('promptSubmit')
-	const cancelBtn = document.getElementById('promptCancel')
-	promptBackground.style.display = 'flex'
-	await delay(1)
-	promptBackground.style.opacity = 1
-	await delay(200)
-	submitBtn.addEventListener('click', async () => {
-		promptBackground.style.opacity = 0
-		await delay(200)
-		promptBackground.style.display = 'none'
-	}, {once: true})
-} 
 
 //electronAPI.onUserPrompt(() => {})
 /* #endregion */

@@ -25,6 +25,15 @@
 	text-align: center;
 }
 
+.vcenter {
+	padding: auto 0;
+}
+
+.vflex {
+	display: flex;
+	flex-direction: column;
+}
+
 .hflex {
 	display: flex;
 	flex-direction: row;
@@ -39,43 +48,56 @@ html {
 
 body {
 	height: 100%;
+	overflow: hidden;
 }
 
 #promptBackground {
-	padding: 32px;
-	background-color: color-mix(in srgb, var(--secColor), transparent);
+	background-color: var(--mainColor);
+	color: var(--secColor);
+	border-top: 8px solid var(--terColor);
 	width: 100%;
-	height: 100%;
-	z-index: 2;
+	height: calc(100% - 124px);
 	position: absolute;
-	top: 0px;
-	left: 0px;
+	top: 100%;
+	padding: 32px;
 	display: flex;
+	z-index: 2;
 	flex-direction: column;
-	color: var(--mainColor);
 	pointer-events: all;
-	transition: opacity 0.2s linear;
+	transition: top 0.6s ease;
 
 	* {
+		border: none;
+		border-radius: 16px;
 		padding: 16px;
+	}
+
+	h1 {
+		padding: 0;
+	}
+
+	h2 {
+		padding: 0;
 	}
 	
 	input {
 		width: 768px;
-		background-color: var(--mainColor);
+		background-color: var(--terColor);
 		color: var(--secColor);
 		pointer-events: all;
+		box-shadow: 6px 6px 10px -1px var(--shadowColor);
 	}
 	
 	button {
-		background-color: var(--mainColor);
-		color: var(--secColor);
 		pointer-events: all;
+		background-color: var(--terColor);
+		color: var(--secColor);
+		box-shadow: 6px 6px 10px -1px var(--shadowColor);
 		opacity: background-color 0.2s linear;
 	}
 
 	button:hover {
-		background-color: color-mix(in srgb, var(--mainColor) 75%, var(--secColor) 25%);
+		background-color: var(--quatColor)
 	}
 }
 
@@ -97,8 +119,15 @@ body {
 	text-align: center;
 	background-color: var(--terColor);
 	pointer-events: all;
-	z-index: 1;
+	z-index: 3;
 	box-shadow: 6px 6px 10px -1px var(--shadowColor);
+}
+
+#mainScroll {
+	width: 100%;
+	height: 100%;
+	overflow: scroll;
+	pointer-events: all;
 }
 
 #main {
@@ -107,6 +136,7 @@ body {
 	margin: 0px auto;
 	padding: 132px 16px 32px 16px;
 	background-color: var(--mainColor);
+	pointer-events: none;
 }
 
 #modpackList>div {
@@ -246,17 +276,4 @@ body {
 		stroke-dasharray: 440px;
 		transition: stroke-dashoffset 0.15s;
 	}
-}
-
-#promptBackground {
-	z-index: 2;
-	background-color: color-mix(in srgb, var(--secColor) 75%, transparent 25%);
-	width: 100%;
-	height: 100%;
-	position: absolute;
-	top: 0px;
-	left: 0px;
-	pointer-events: all;
-	opacity: 1;
-	transition: opacity 0.2s linear;
 }
