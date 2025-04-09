@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onReady: (callback) => ipcRenderer.on('Ready', (_event) => callback()),
   onConfigRead: (callback) => ipcRenderer.on('App:ConfigRead', (_event, config) => callback(config)),
   onPackConfigRead: (callback) => ipcRenderer.on('Pack:ConfigsRead', (_event, configs) => callback(configs)),
+  onDisplayPrompt: (callback) => ipcRenderer.on('Prompt:Display', (_event, respond, options) => callback((respond) ? (data) => ipcRenderer.invoke(respond, data) : () => {}, options)),
 
   onVersionDownloadError: (callback) => ipcRenderer.on('Error:VersionDownload', (_event, modpackId, err) => callback(modpackId, err)),
   onVersionReadError: (callback) => ipcRenderer.on('Error:VersionRead', (_event, modpackId, err) => callback(modpackId, err)),

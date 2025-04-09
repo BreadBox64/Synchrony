@@ -1,10 +1,10 @@
 const {log, debug, error, warn} = require('node:console'); 
-const { randomInt } = require('node:crypto');
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const path = require('node:path')
 const util = require('node:util')
-const {Worker, MessageChannel, MessagePort, isMainThread, parentPort} = require('node:worker_threads');
+const bent = require('bent')
+const fetchString = bent('string')
 require('./jsdoc.js')
 
 const { app, BrowserWindow, dialog, ipcMain, nativeTheme } = require('electron/main');
@@ -23,77 +23,10 @@ global.moduleExport = {
 
 const {loadConfig, saveConfig, loadPackConfig, loadPackConfigs, savePackConfig, newPackConfig} = require("./config.js")
 const {delay} = require("./utils.js");
-const { pid } = require('node:process');
+const { Version } = require("./version.js")
 
-function handleSquirrelEvent() {
-  if (process.platform !== 'win32') {
-    return false;
-  }
-  if (process.argv.length === 1) {
-    return false;
-  }
-
-  const ChildProcess = require('child_process');
-
-  const appFolder = path.resolve(process.execPath, '..');
-  const rootAtomFolder = path.resolve(appFolder, '..');
-  const updateDotExe = path.resolve(path.join(rootAtomFolder, 'Update.exe'));
-  const exeName = path.basename(process.execPath);
-
-  const spawn = function(command, args) {
-    let spawnedProcess, error;
-
-    try {
-      spawnedProcess = ChildProcess.spawn(command, args, {detached: true});
-    } catch (error) {}
-
-    return spawnedProcess;
-  };
-
-  const spawnUpdate = function(args) {
-    return spawn(updateDotExe, args);
-  };
-
-  const squirrelEvent = process.argv[1];
-  switch (squirrelEvent) {
-    case '--squirrel-install':
-    case '--squirrel-updated':
-      // Optionally do things such as:
-      // - Add your .exe to the PATH
-      // - Write to the registry for things like file associations and
-      //   explorer context menus
-
-      // TODO - Actually handle config setup etc. with installer
-      // Install desktop and start menu shortcuts
-      spawnUpdate(['--createShortcut', exeName]);
-
-      setTimeout(app.quit, 1000);
-      return true;
-
-    case '--squirrel-uninstall':
-      // Undo anything you did in the --squirrel-install and
-      // --squirrel-updated handlers
-
-      // Remove desktop and start menu shortcuts
-      spawnUpdate(['--removeShortcut', exeName]);
-
-      setTimeout(app.quit, 1000);
-      return true;
-
-    case '--squirrel-obsolete':
-      // This is called on the outgoing version of your app before
-      // we update to the new version - it's the opposite of
-      // --squirrel-updated
-
-      app.quit();
-      return true;
-  }
-};
-
-if (handleSquirrelEvent()) {
-  // squirrel event handled and app will exit in 1000ms, so don't do anything else
-  return;
-}
+process.noDeprecation = true
+log(process.argv)
 
 const configPath = path.join(app.getPath('userData'), 'synchronyConfig')
 const sessionPath = app.getPath('sessionData')
@@ -101,8 +34,55 @@ const sessionPath = app.getPath('sessionData')
 let config = {}
 /** @type {Object.<string, packConfig>} */
 let packConfigs = {}
-const versionRegex = /(\d+)\.(\d+)\.(\d+)(?:-([b|n])(\d+))?/;
 let win;
+
+async function checkForUpdates(packConfig) {
+  try {
+    const versioningFile = (await fetchString(packConfig.upstreamVersionURL)).trim().split('\n')
+    const upstreamVersion = (() => {
+      for(let i = 0; i < versioningFile.length; i++) {
+        if(versioningFile[i] === packConfig.localBranch) {
+          return versioningFile[i+1]
+        }
+      }
+      throw(`No version found upstream for branch "${packConfig.localBranch}", config may be malformed!`)
+    })()
+    const updateNeeded = new Version(upstreamVersion).gt(new Version(packConfig.localVersion)) 
+    win.webContents.send('Update:Response', packConfig.id, updateNeeded, packConfig)
+    return updateNeeded
+  } catch (e) {
+    win.webContents.send('Error:VersionDownload', packConfig.id, e)
+    error(e)
+    return false
+  }
+}
+
+async function synchronyUpdate() {
+  const currentVersion = new Version(config.synchronyVersion)
+  const latestVersionString = await fetchString("https://raw.githubusercontent.com/BreadBox64/Synchrony/refs/heads/master/version")
+  const latestVersion = new Version(latestVersionString)
+  if(latestVersion.lte(currentVersion)) {
+    // Up to date
+    return
+  }
+  win.webContents.send('Prompt:Display', null, [`
+    <div class="vflex hcenter">
+      <h1 class="josefin-sans hcenter">Synchrony Update Available</h1>
+      <br>
+      <h2 class="josefin-sans hcenter">Synchrony ${config.synchronyVersion} is out of date; the latest version is now ${latestVersionString}.
+      <br>
+      <a target="_blank" href="https://github.com/BreadBox64/Synchrony/blob/master/readme.md#Updates">Please follow this link to instructions to download the latest version.</a>
+      <br>
+      <a target="_blank" href="https://github.com/BreadBox64/Synchrony/releases/latest">Alternatively, here is a direct link to the latest release.</a></h2>
+      <div class="hflex hcenter" style="height:96px;width: min-content;">
+        <button id="promptSubmit" class="" style="width:192px;">
+          <h2 class="josefin-sans">Ok</h2>
+        </button>
+      </div>
+      <p id=promptCancel></p>
+    </div>
+  `])
+}
 
 /**
  * 
@@ -411,82 +391,6 @@ async function updateModpack(id) {
   }
 }
 
-function readVersionData(inputStr) {
-  let versionIter = inputStr.match(versionRegex)
-  let out = {}
-
-  if(versionIter[5] != null) {
-    out = {
-      str: inputStr,
-      major: parseInt(versionIter[1]),
-      minor: parseInt(versionIter[2]),
-      patch: parseInt(versionIter[3]),
-      flag:  versionIter[4],
-      flagv: parseInt(versionIter[5]),
-    }
-  } else {
-    out = {
-      str: inputStr,
-      major: parseInt(versionIter[1]),
-      minor: parseInt(versionIter[2]),
-      patch: parseInt(versionIter[3]),
-    }
-  }
-
-  return out
-}
-
-const updateDownloadErrorHandler = (p, e) => {return () => {win.webContents.send('Error:VersionDownload', p, e); error(e)}}
-function checkForUpdates(packConfig) {
-  let updateNeeded = false
-  let timedOut = false
-
-  try {
-  let dl = new DownloaderHelper(packConfig.upstreamVersionURL, sessionPath, {
-    fileName: `${packConfig.id}:upstreamVersion`,
-    override: true,
-    retry: {maxRetries: 5, delay: 1000}
-  });
-  dl.on('end', () => {
-    debug("Downloaded versioning file.")
-    try {
-      let upstreamVersionFile = fs.readFileSync(path.join(sessionPath, `${packConfig.id}:upstreamVersion`), 'utf8').split('\n');
-
-      for(let i = 0; i < upstreamVersionFile.length; i++) {
-        if(upstreamVersionFile[i] === packConfig.localBranch) {
-          packConfig.upstreamVersion = upstreamVersionFile[i+1]
-        }
-      }
-
-      let lv = readVersionData(packConfig.localVersion)
-      let uv = readVersionData(packConfig.upstreamVersion)
-      if(lv.major >= uv.major) {
-        if(lv.minor >= uv.minor) {
-          if(lv.patch >= uv.patch) {
-            if(lv.flag && lv.flagv < uv.flagv) updateNeeded = true
-          } else {updateNeeded = true}
-        } else {updateNeeded = true}
-      } else {updateNeeded = true}
-
-      win.webContents.send('Update:Response', packConfig.id, updateNeeded, packConfig)
-    } catch(e) {
-      win.webContents.send('Error:VersionRead', packConfig.id, e)
-      error(e)
-    }
-  });
-  dl.on('retry', (attempt, retryOptions) => {
-    log(`attempt ${attempt}`)
-    if(attempt == retryOptions.maxRetries) {
-      timedOut = true
-      updateDownloadErrorHandler(packConfig.id, "Timed Out")()
-    }
-  })
-  dl.on('error', () => {if(!timedOut) updateDownloadErrorHandler(packConfig.id, "Internal Error")});
-  dl.start().catch(() => {if(!timedOut) updateDownloadErrorHandler(packConfig.id, "Internal Error")});
-  } catch(e) {updateDownloadErrorHandler(packConfig.id, e)}
-  return updateNeeded
-}
-
 function addModpack(addMethod, arguments) {
   dialog.showOpenDialogSync({
     title: "Select the existing modpack folder",
@@ -513,17 +417,18 @@ const createWindow = () => {
   win.setMinimumSize(800, 600)
   win.loadFile('index.html')
 
-  win.once('ready-to-show', () => {
-    const [configSuccess, configData] = loadConfig(configPath, config)
+  win.once('ready-to-show', async () => {
+    const [configSuccess, configData] = loadConfig(configPath)
     if(configSuccess) config = configData; else return
     win.webContents.send('App:ConfigRead', config)
 
     const [packSuccess, packData] = loadPackConfigs(config.packConfigs)
     if(packSuccess) packConfigs = packData; else return
     win.webContents.send('Pack:ConfigsRead', packConfigs)
-    Object.entries(packConfigs).forEach(([_id, packConfig]) => {checkForUpdates(packConfig)})
+    for(const [_id, packConfig] of Object.entries(packConfigs)) await checkForUpdates(packConfig);
   
     setTimeout(() => {win.show()}, 10)
+    synchronyUpdate()
   })
   return win
 }

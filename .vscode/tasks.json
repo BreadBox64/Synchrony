@@ -2,23 +2,24 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "Build Only (win32)",
 			"type": "shell",
 			"command": "npx electron-forge make --platform=win32",
 			"problemMatcher": [],
-			"label": "win32 build",
 			"group": "build"
 		},
 		{
+			"label": "Build Only (linux)",
 			"type": "shell",
 			"command": "npx electron-forge make --platform=linux",
 			"problemMatcher": [],
-			"label": "linux build"
+			"group": "build"
 		},
 		{
-			"label": "All Platform Build",
+			"label": "Build Only (win32 & linux)",
 			"dependsOn": [
-				"win32 build",
-				"linux build"
+				"Build Only (win32)",
+				"Build Only (linux)"
 			],
 			"problemMatcher": [],
 			"group": {
@@ -27,9 +28,29 @@
 			}
 		},
 		{
-			"label": "Release",
+			"label": "Build & Publish to Github (win32)",
 			"type": "shell",
-			"command": "gh release create --fail-on-no-commits -d --generate-notes"
+			"command": "npx electron-forge publish --platform=win32",
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Build & Publish to Github (linux)",
+			"type": "shell",
+			"command": "npx electron-forge publish --platform=linux",
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Build & Publish to Github (win32 & linux)",
+			"dependsOn": [
+				"Build & Publish to Github (win32)",
+				"Build & Publish to Github (linux)"
+			],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+			}
 		}
 	]
 }

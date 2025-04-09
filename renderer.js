@@ -250,7 +250,7 @@ electronAPI.onNativeThemeChange((useDarkMode) => {
  * @param {string} innerHTML 
  * @param {Function} validate Predicate to confirm data is valid before closing prompt
  */
-async function displayUserPrompt(innerHTML, dataShape, validate, handleInvalid, reset) {
+async function displayUserPrompt(innerHTML, dataShape = {}, validate = (_) => {return true}, reset = () => {}) {
 	return new Promise(async (resolve) => {
 		promptBackground.innerHTML = innerHTML
 		promptBackground.style.top = '124px'
@@ -298,6 +298,10 @@ async function displayUserPrompt(innerHTML, dataShape, validate, handleInvalid, 
 		document.getElementById('promptCancel').addEventListener('click', cancel, {once: true})
 	})
 }
+
+electronAPI.onDisplayPrompt(async (respond, promptOptions) => {
+	respond(await displayUserPrompt(...promptOptions))
+})
 /* #endregion */
 
 /* #region  Startup */

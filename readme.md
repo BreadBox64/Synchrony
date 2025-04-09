@@ -1,6 +1,9 @@
 # Synchrony: A Simple Modpack Sync Application
-## Install & Use
-Currently you must build the application yourself. Builds will be attached to future Beta releases
+## Install
+Currently you must build the application yourself. Builds will be attached once it reaches release
+## Use
+## Updates
+
 
 ## Contributing
 To get started you will need to have installed:
@@ -17,8 +20,10 @@ npm install --save-dev electron-forge/maker-squirrel@7.7.0
 npm install --save-dev electron-forge/maker-zip@7.7.0
 npm install --save-dev electron-forge/plugin-auto-unpack-natives@7.7.0
 npm install --save-dev electron-forge/plugin-fuses@7.7.0
+npm install --save-dev @electron-forge/publisher-github
 npm install --save-dev electron-winstaller
 npm install node-downloader-helper@2.1.9
+npm install bent@7.3.12
 ```
 If you are using VScode, the launch config should allow you to immediately use the run & debug shortcuts (Ctrl+F5 / F5)
 

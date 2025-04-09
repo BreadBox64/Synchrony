@@ -51,6 +51,10 @@ body {
 	overflow: hidden;
 }
 
+a {
+	pointer-events: all;
+}
+
 #promptBackground {
 	background-color: var(--mainColor);
 	color: var(--secColor);

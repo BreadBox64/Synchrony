@@ -8,9 +8,9 @@ module.exports = {
   },
   rebuildConfig: {},
   makers: [
-    {
+    /*{
       name: '@electron-forge/maker-squirrel',
-    },
+    },*/
     {
       name: '@electron-forge/maker-zip',
     },
@@ -36,4 +36,19 @@ module.exports = {
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
     }),
   ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'BreadBox64',
+          name: 'Synchrony'
+        },
+        prerelease: true,
+        draft: true,
+        generateReleaseNotes: true,
+
+      }
+    }
+  ]
 };
