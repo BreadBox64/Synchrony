@@ -250,7 +250,7 @@ electronAPI.onNativeThemeChange((useDarkMode) => {
  * @param {string} innerHTML 
  * @param {Function} validate Predicate to confirm data is valid before closing prompt
  */
-async function displayUserPrompt(innerHTML, dataShape = {}, validate = (_) => {return true}, reset = () => {}) {
+async function displayUserPrompt(innerHTML, dataShape = {}, validate = (_) => {return true}, reset = () => {}, resetTime = 0) {
 	return new Promise(async (resolve) => {
 		promptBackground.innerHTML = innerHTML
 		promptBackground.style.top = '124px'
@@ -262,6 +262,8 @@ async function displayUserPrompt(innerHTML, dataShape = {}, validate = (_) => {r
 			promptBackground.style.top = '100%'
 		}
 		const submit = async () => {
+			reset()
+			await delay(resetTime)
 			const outData = Object.fromEntries(
 				Object.entries(dataShape).map(([key, elementID]) => {
 					/** @type {HTMLInputElement} */
@@ -277,7 +279,7 @@ async function displayUserPrompt(innerHTML, dataShape = {}, validate = (_) => {r
 				})
 			)
 			
-			if(validate(outData)) {
+			if(await validate(outData)) {
 				reset()
 				closePrompt()
 				submitButton.removeEventListener('click', submit)
@@ -295,7 +297,7 @@ async function displayUserPrompt(innerHTML, dataShape = {}, validate = (_) => {r
 
 		submitButton?.addEventListener('click', submit)
 		document.getElementById('promptConfirm')?.addEventListener('click', confirm, {once: true})
-		document.getElementById('promptCancel').addEventListener('click', cancel, {once: true})
+		document.getElementById('promptCancel')?.addEventListener('click', cancel, {once: true})
 	})
 }
 
@@ -368,7 +370,7 @@ function setupModpackAdd() {
 					<h1 class="josefin-sans hcenter">Add A Modpack</h1>
 					<br>
 					<input id="promptUrl" class="hcenter josefin-sans" type="text" placeholder="URL of Modpack to Add" style="font-size:24px">
-					<p id="promptError" class="josefin-sans" style="font-size:16px; color: red; height:16px"></p>
+					<p id="promptError" class="josefin-sans fade50ms" style="font-size:16px; color: red; height:16px"></p>
 					<div class="hflex hcenter" style="height:96px;width: min-content;">
 						<button id="promptSubmit" class="" style="width:192px;">
 							<h2 class="josefin-sans">Ok</h2>
@@ -394,8 +396,8 @@ function setupModpackAdd() {
 					addModpack(data.id, data)
 				} else {
 					document.getElementById('promptError').innerText = `Adding Modpack Failed: ${data}`
-					return false
 				}
+				return status
 			},
 			(_) => {document.getElementById('promptError').innerText = "";}
 		)

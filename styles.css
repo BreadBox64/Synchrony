@@ -41,6 +41,11 @@
 	width: 100%;
 }
 
+.fade50ms {
+	opacity: 1;
+	transform: opacity 0.05s linear;
+}
+
 html {
 	background-color: var(--mainColor);
 	height: 100%;

@@ -11,6 +11,7 @@
   },
   "author": "BreadBox64",
   "license": "Unlicense",
+  "repository": "github:BreadBox64/Synchrony",
   "devDependencies": {
     "@electron-forge/cli": "^7.7.0",
     "@electron-forge/maker-deb": "^7.7.0",
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "bent": "^7.3.12",
-    "node-downloader-helper": "^2.1.9"
+    "node-downloader-helper": "^2.1.9",
+    "update-electron-app": "^3.1.1"
   }
 }

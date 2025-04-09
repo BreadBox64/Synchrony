@@ -8,6 +8,7 @@ const fetchString = bent('string')
 require('./jsdoc.js')
 
 const { app, BrowserWindow, dialog, ipcMain, nativeTheme } = require('electron/main');
+const { updateElectronApp } = require('update-electron-app');
 const { DownloaderHelper } = require('node-downloader-helper');
 
 global.moduleExport = {
@@ -65,7 +66,8 @@ async function synchronyUpdate() {
     // Up to date
     return
   }
-  win.webContents.send('Prompt:Display', null, [`
+  //process.platform === 'linux'
+  /*win.webContents.send('Prompt:Display', null, [`
     <div class="vflex hcenter">
       <h1 class="josefin-sans hcenter">Synchrony Update Available</h1>
       <br>
@@ -81,7 +83,8 @@ async function synchronyUpdate() {
       </div>
       <p id=promptCancel></p>
     </div>
-  `])
+  `])*/
+  updateElectronApp({updateInterval: '1 day'})
 }
 
 /**
