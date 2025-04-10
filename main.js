@@ -66,14 +66,19 @@ async function synchronyUpdate() {
     // Up to date
     return
   }
-  //process.platform === 'linux'
-  /*win.webContents.send('Prompt:Display', null, [`
+  if(process.platform === 'linux') {
+  win.webContents.send('Prompt:Display', null, [`
     <div class="vflex hcenter">
       <h1 class="josefin-sans hcenter">Synchrony Update Available</h1>
       <br>
       <h2 class="josefin-sans hcenter">Synchrony ${config.synchronyVersion} is out of date; the latest version is now ${latestVersionString}.
       <br>
-      <a target="_blank" href="https://github.com/BreadBox64/Synchrony/blob/master/readme.md#Updates">Please follow this link to instructions to download the latest version.</a>
+      <br>
+      Since you are running a Linux build of Synchrony, automatic updates are unavailable. 
+      <br>
+      <br>
+      <a target="_blank" href="https://github.com/BreadBox64/Synchrony/blob/master/readme.md#Updates">Please follow this link to instructions on updating to the latest version.</a>
+      <br>
       <br>
       <a target="_blank" href="https://github.com/BreadBox64/Synchrony/releases/latest">Alternatively, here is a direct link to the latest release.</a></h2>
       <div class="hflex hcenter" style="height:96px;width: min-content;">
@@ -83,8 +88,10 @@ async function synchronyUpdate() {
       </div>
       <p id=promptCancel></p>
     </div>
-  `])*/
-  updateElectronApp({updateInterval: '1 day'})
+  `])
+  } else {
+    updateElectronApp({updateInterval: '1 day'})
+  }
 }
 
 /**
