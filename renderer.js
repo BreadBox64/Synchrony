@@ -370,6 +370,7 @@ function setupModpackAdd() {
 					<h1 class="josefin-sans hcenter">Add A Modpack</h1>
 					<br>
 					<input id="promptUrl" class="hcenter josefin-sans" type="text" placeholder="URL of Modpack to Add" style="font-size:24px">
+					<h4 class="josefin-sans" style="font-size:20px; color: red; height:16px">Ensure you trust any link you enter! Prompts are not stripped of potentially harmful content!</h4>
 					<p id="promptError" class="josefin-sans fade50ms" style="font-size:16px; color: red; height:16px"></p>
 					<div class="hflex hcenter" style="height:96px;width: min-content;">
 						<button id="promptSubmit" class="" style="width:192px;">

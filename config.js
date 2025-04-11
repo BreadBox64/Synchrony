@@ -114,6 +114,15 @@ function loadConfig(path) {
   }
 }
 
+async function loadDescriptor(url) {
+  const lines = await fetchString(url).trim().replace(/\r\n/g,'\n').split('\n')
+  let describe = {}
+  lines.forEach((line) => {
+    const [param, value] = line.split(' => ')
+    describe[param] = value
+  })
+}
+
 function saveConfig(path, config) {
   try {
     const configString = [

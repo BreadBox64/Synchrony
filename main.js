@@ -63,32 +63,33 @@ async function synchronyUpdate() {
   const latestVersionString = await fetchString("https://raw.githubusercontent.com/BreadBox64/Synchrony/refs/heads/master/version")
   const latestVersion = new Version(latestVersionString)
   if(latestVersion.lte(currentVersion)) {
-    // Up to date
+    log("Upto-date Synchrony version detected.")
     return
   }
+  log("Outdated Synchrony version detected.")
   if(process.platform === 'linux') {
-  win.webContents.send('Prompt:Display', null, [`
-    <div class="vflex hcenter">
-      <h1 class="josefin-sans hcenter">Synchrony Update Available</h1>
-      <br>
-      <h2 class="josefin-sans hcenter">Synchrony ${config.synchronyVersion} is out of date; the latest version is now ${latestVersionString}.
-      <br>
-      <br>
-      Since you are running a Linux build of Synchrony, automatic updates are unavailable. 
-      <br>
-      <br>
-      <a target="_blank" href="https://github.com/BreadBox64/Synchrony/blob/master/readme.md#Updates">Please follow this link to instructions on updating to the latest version.</a>
-      <br>
-      <br>
-      <a target="_blank" href="https://github.com/BreadBox64/Synchrony/releases/latest">Alternatively, here is a direct link to the latest release.</a></h2>
-      <div class="hflex hcenter" style="height:96px;width: min-content;">
-        <button id="promptSubmit" class="" style="width:192px;">
-          <h2 class="josefin-sans">Ok</h2>
-        </button>
+    win.webContents.send('Prompt:Display', null, [`
+      <div class="vflex hcenter">
+        <h1 class="josefin-sans hcenter">Synchrony Update Available</h1>
+        <br>
+        <h2 class="josefin-sans hcenter">Synchrony ${config.synchronyVersion} is out of date; the latest version is now ${latestVersionString}.
+        <br>
+        <br>
+        Since you are running a Linux build of Synchrony, automatic updates are unavailable. 
+        <br>
+        <br>
+        <a target="_blank" href="https://github.com/BreadBox64/Synchrony/blob/master/readme.md#Updates">Please follow this link to instructions on updating to the latest version.</a>
+        <br>
+        <br>
+        <a target="_blank" href="https://github.com/BreadBox64/Synchrony/releases/latest">Alternatively, here is a direct link to the latest release.</a></h2>
+        <div class="hflex hcenter" style="height:96px;width: min-content;">
+          <button id="promptSubmit" class="" style="width:192px;">
+            <h2 class="josefin-sans">Ok</h2>
+          </button>
+        </div>
+        <p id=promptCancel></p>
       </div>
-      <p id=promptCancel></p>
-    </div>
-  `])
+    `])
   } else {
     updateElectronApp({updateInterval: '1 day'})
   }
@@ -230,9 +231,6 @@ function parseChanges(id, changes) {
       args.push(currentArg)
 
       switch(args[0]) {
-        case '?':
-          args[2] = args[2].split(';')
-          break
         case '+':
           parsedDownloads.push([`cache:${id}:${args[1]}`, args.splice(4, args.length - 5, `cache:${id}:${args[1]}`)])
           break
@@ -326,36 +324,42 @@ async function processChanges(id, changes) {
     for(let i = 0; i < numChanges; i++) {
       const change = changes.changes[i]
       switch(change[0]) {
-        case '>': {
-          const [_arg, version] = change
+        case '>': { // Import changes from another diff
+          const [_arg, id, version] = change
           break
           }
-        case '?': {
-          const [_arg, prompt, ids] = change
+        case '$': { // Config operation
+          const [_arg, id, key, value] = change
+        }
+        case '?+': { // Prompt conditional download
+          const [_arg, id, path, decompress, cache, prompt, options] = change
           break
           }
-        case '/': {
-          const [_arg, comment] = change
+        case '?~': { // Prompt user to select a folder
+
+        }
+        case '/': { // Comment to user
+          const [_arg, id, comment] = change
           break
           }
-        case '\\': {
-          const [_arg, comment] = change
+        case '\\': { // Log to stdout
+          const [_arg, id, comment] = change
           log('\\ found')
           break
           }
-        case '+': {
+        case '+': { // Download and install file or compressed directory
           const [_arg, id, path, decompress, cache, comment] = change
           break
           }
-        case '-': {
+        case '-': { // Delete installed file
           const [_arg, id, path, comment] = change
           break
           }
-        case '*': {
+        case '*': {  // Execute line replacements on installed file
           const [_arg, id, path, lineNums, replacements, comment] = change
           break
           }
-        case '^': {
+        case '^': { // Execute regex on installed file
           const [_arg, id, path, regexPattern, replacements, comment] = change
           break
           }
