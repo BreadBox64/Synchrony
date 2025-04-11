@@ -4,7 +4,8 @@
  * @property {string} synchronyVersion
  * @property {string} packConfigs
  * @property {number} maxWorkers
- * @property {string} theme
+ * @property {string} themeBrightness
+ * @property {string} themeColor
  */
 
 /**

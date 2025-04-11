@@ -455,7 +455,7 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('App:ThemeChange', (_event, newTheme) => {
     nativeTheme.themeSource = newTheme
-    config.theme = newTheme
+    config.themeBrightness = newTheme
     return nativeTheme.shouldUseDarkColors
   })
   ipcMain.handle('App:AddPack', (_event, addMethod, arguments) => addModpack(addMethod, arguments))

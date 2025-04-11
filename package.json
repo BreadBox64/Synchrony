@@ -1,6 +1,6 @@
 {
   "name": "synchrony",
-  "version": "1.0.0-n3",
+  "version": "1.0.0-n4",
   "description": "A Simple Modpack Sync Application",
   "main": "main.js",
   "scripts": {

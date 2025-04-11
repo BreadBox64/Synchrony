@@ -120,6 +120,19 @@ a {
 	z-index: 2;
 }
 
+#colorSwitch {
+	pointer-events: all;
+	position: fixed;
+	color: var(--quatColor);
+	user-select: none;
+	bottom: 64px;
+	left: 8px;
+	z-index: 2;
+	background-color: var(--secColor);
+	border-radius: 24px;
+	padding: 4px;
+}
+
 #appTitle {
 	width: 100%;
 	color: var(--secColor);

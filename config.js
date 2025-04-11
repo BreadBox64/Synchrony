@@ -67,7 +67,8 @@ const defaultConfig = {
   packConfigs: [],
   maxWorkers: 5,
   synchronyVersion: app.getVersion(),
-  theme: 'system'
+  themeBrightness: 'system',
+  themeColor: 'purple'
 }
 
 /**
@@ -76,7 +77,7 @@ const defaultConfig = {
  * @returns {[boolean, config|Error]}
  */
 function loadConfig(path) {
-  let newConfig = {}
+  let newConfig = structuredClone(defaultConfig)
   let configArray
   try {
     configArray = fs.readFileSync(path, 'utf-8').toString().replace(/\r\n/g,'\n').split('\n')
@@ -130,7 +131,8 @@ function saveConfig(path, config) {
       `defaultPack => ${config.defaultPack.toString()}`,
       `packConfigs => ${config.packConfigs.join(' ||| ')}`,
       `maxWorkers => ${config.maxWorkers}`,
-      `theme => ${config.theme}`
+      `themeBrightness => ${config.themeBrightness}`,
+      `themeColor => ${config.themeColor}`
     ].join('\n')
 
     fs.writeFileSync(path, configString, {override: true})

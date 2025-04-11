@@ -48,6 +48,11 @@ span.size-32 {
   font-variation-settings: 'OPSZ' 32;
 }
 
+span.size-40 {
+  font-size: 40px;
+  font-variation-settings: 'OPSZ' 40;
+}
+
 span.size-48 {
   font-size: 48px;
   font-variation-settings: 'OPSZ' 48;
@@ -56,6 +61,11 @@ span.size-48 {
 span.size-64 {
   font-size: 64px;
   font-variation-settings: 'OPSZ' 64;
+}
+
+span.size-72 {
+  font-size: 72px;
+  font-variation-settings: 'OPSZ' 72;
 }
 
 span.size-80 {

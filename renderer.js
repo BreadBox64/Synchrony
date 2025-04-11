@@ -1,6 +1,7 @@
 import "./jsdoc.js"
 import { delay } from './utils.js'
 import { createModpackElement, updateElementDetails, updateElementTheme } from "./modpackElement.js"
+import { themes, nextMapThemeColor, nextMapThemeBrightness, symbolMapThemeBrightness } from "./theme.js"
 
 const electronAPI = window.electronAPI
 const root = document.querySelector(':root')
@@ -16,7 +17,10 @@ const addButtons = {
 	url: modpackAdd.children.item(2)
 }
 const themeSwitch = document.getElementById('themeSwitch')
-let currentTheme = 'system'
+const colorSwitch = document.getElementById('colorSwitch')
+let currentThemeBrightness = 'system'
+let currentThemeColor = 'purple'
+let usingDarkMode = true
 
 const pressedKeys = {};
 window.onkeyup = (e) => { pressedKeys[e.keyCode] = false; }
@@ -192,53 +196,30 @@ function clearLoadingProgress(modpackId) {
 /* #endregion */
 
 /* #region  Themes */
-const themes = {
-	light: [
-		['--mainColor', '#ffffff'],
-		['--secColor', '#2c2c2c'],
-		['--terColor', '#ebe6ff'],
-		['--quatColor', '#dcd3ff'],
-		['--shadowColor', '#2c2c2c20']
-	],
-	dark: [
-		['--mainColor', '#2c2c2c'],
-		['--secColor', '#ffffff'],
-		['--terColor', '#49445b'],
-		['--quatColor', '#413d4f'],
-		['--shadowColor', '#0000003a']
-	]
-}
-
-function setTheme(useDarkMode) {
-	themeSwitch.innerText = themeSymbolMap[currentTheme]
-	themes[useDarkMode ? 'dark' : 'light']?.forEach(([v, c]) => {
+function setTheme() {
+	themeSwitch.innerText = symbolMapThemeBrightness[currentThemeBrightness]
+	colorSwitch.style.color = (usingDarkMode) ? 'var(--terColor)' : 'var(--quatColor)'
+	themes[currentThemeColor][usingDarkMode ? 'dark' : 'light']?.forEach(([v, c]) => {
 		root.style.setProperty(v, c)
 	})
 	Object.keys(states).forEach(id => {
-		updateElementTheme(id, root, displayConfigs[id], useDarkMode)
+		updateElementTheme(id, root, displayConfigs[id], usingDarkMode)
 	})
 }
 
-const themeNextMap = {
-	light: 'dark',
-	dark: 'system',
-	system: 'light'
-}
-
-const themeSymbolMap = {
-	light: 'light_mode',
-	dark: 'dark_mode',
-	system: 'contrast'
-}
-
 themeSwitch.addEventListener('click', async () => {
-	currentTheme = themeNextMap[currentTheme]
-	const useDarkMode = await electronAPI.ThemeChange(currentTheme)
-	setTheme(useDarkMode)
+	currentThemeBrightness = nextMapThemeBrightness[currentThemeBrightness]
+	usingDarkMode = await electronAPI.ThemeChange(currentThemeBrightness)
+	setTheme()
+})
+
+colorSwitch.addEventListener('click', async () => {
+	currentThemeColor = nextMapThemeColor[currentThemeColor]
+	setTheme()
 })
 
 electronAPI.onNativeThemeChange((useDarkMode) => {
-	if(currentTheme === 'system') setTheme(useDarkMode)
+	if(currentThemeBrightness === 'system') {usingDarkMode = useDarkMode; setTheme()}
 })
 
 /* #endregion */
@@ -407,10 +388,11 @@ function setupModpackAdd() {
 }
 
 electronAPI.onConfigRead(async (config) => {
-	currentTheme = config.theme
-	const useDarkMode = await electronAPI.ThemeChange(currentTheme)
-	console.log(`Theme: ${currentTheme} | Use Dark Mode: ${useDarkMode}`)
-	setTheme(useDarkMode)
+	currentThemeBrightness = config.themeBrightness
+	currentThemeColor = config.themeColor
+	usingDarkMode = await electronAPI.ThemeChange(currentThemeBrightness)
+	console.log(`Theme: ${currentThemeBrightness} | Use Dark Mode: ${usingDarkMode} | Color: ${currentThemeColor}`)
+	setTheme()
 })
 
 electronAPI.onPackConfigRead((packConfigs) => {

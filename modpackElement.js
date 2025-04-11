@@ -58,8 +58,10 @@ export function createModpackElement(config, displayConfig) {
  * @param {string} theme Theme to switch to 
  */
 export function updateElementTheme(id, root, displayConfig, useDarkMode) {
-	root.style.setProperty(`--color0-${id}`, displayConfig.colors[useDarkMode ? 2 : 0])
-	root.style.setProperty(`--color1-${id}`, displayConfig.colors[useDarkMode ? 3 : 1])
+	//root.style.setProperty(`--color0-${id}`, displayConfig.colors[useDarkMode ? 2 : 0])
+	//root.style.setProperty(`--color1-${id}`, displayConfig.colors[useDarkMode ? 3 : 1])
+	root.style.setProperty(`--color0-${id}`, 'var(--terColor)')
+	root.style.setProperty(`--color1-${id}`, 'var(--quatColor)')
 }
 
 /**
