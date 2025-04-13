@@ -31,6 +31,22 @@ const themes = {
 			['--shadowColor', '#0000003a']
 		]
 	},
+	green: {
+		light: [
+			['--mainColor', '#ffffff'],
+			['--secColor', '#2c2c2c'],
+			['--terColor', '#d9ede3'],
+			['--quatColor', '#c5cced'],
+			['--shadowColor', '#2c2c2c20']
+		],
+		dark: [
+			['--mainColor', '#2c2c2c'],
+			['--secColor', '#ffffff'],
+			['--terColor', '#3d5549'],
+			['--quatColor', '#37493f'],
+			['--shadowColor', '#0000003a']
+		]
+	},
 	redorange: {
 		light: [
 			['--mainColor', '#ffffff'],
@@ -51,7 +67,8 @@ const themes = {
 
 const nextMapThemeColor = {
 	purple: 'blue',
-	blue: 'redorange',
+	blue: 'green',
+	green: 'redorange',
 	redorange: 'purple',
 }
 

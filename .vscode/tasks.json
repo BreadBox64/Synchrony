@@ -22,10 +22,7 @@
 				"Build Only (linux)"
 			],
 			"problemMatcher": [],
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
+			"group": "build"
 		},
 		{
 			"label": "Build & Publish to Github (win32)",
@@ -50,6 +47,7 @@
 			"problemMatcher": [],
 			"group": {
 				"kind": "build",
+				"isDefault": true
 			}
 		}
 	]
