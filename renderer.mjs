@@ -1,7 +1,7 @@
 import "./jsdoc.js"
-import { delay } from './utils.js'
-import { createModpackElement, updateElementDetails, updateElementTheme } from "./modpackElement.js"
-import { themes, nextMapThemeColor, nextMapThemeBrightness, symbolMapThemeBrightness } from "./theme.js"
+import { delay } from './utils.mjs'
+import { createModpackElement, updateElementDetails, updateElementTheme } from "./modpackElement.mjs"
+import { themes, nextMapThemeColor, nextMapThemeBrightness, symbolMapThemeBrightness } from "./theme.mjs"
 
 const electronAPI = window.electronAPI
 const root = document.querySelector(':root')
@@ -99,6 +99,9 @@ async function setSymbolByState(modpackId, pret, postt) {
 			symbol.innerText = "error"
 			loading.title = "Click to re-try update, Shift+Click to re-check for updates."
 			break
+		default:
+			symbol.innerText = 'report'
+			loading.title = "There was an internal error, please report this immediately on GitHub."
 	}
 	symbol.style.opacity = 1
 	if (postt) {
@@ -451,6 +454,7 @@ electronAPI.onChangelistParseError((modpackId, _err) => {
 /* #region  Response Handlers */
 electronAPI.onUpdateCheckedFor((modpackId, updateNeeded, config) => {
 	console.log("Recieved UpdateCheck Response")
+	console.log(config)
 	configs[modpackId] = config
 	updateElementDetails(dom[modpackId], config, updateNeeded ? 'A Modpack Update is Needed' : 'Modpack is Up-To-Date')
 	states[modpackId] = updateNeeded ? 'predownload' : 'postdownload'

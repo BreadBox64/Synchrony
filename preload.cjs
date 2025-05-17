@@ -1,5 +1,4 @@
 const { contextBridge, ipcRenderer } = require('electron')
-const {log} = require('node:console')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   node: () => process.versions.node,

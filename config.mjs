@@ -1,4 +1,5 @@
-const {log, debug, error, fs, fsp, path, app, dialog} = global.moduleExport
+const {log, debug, error, fs, fsp, path, dialog} = global.moduleExport
+const app = global.app
 import './jsdoc.js'
 
 async function handleFileOpen(options) {
@@ -19,7 +20,6 @@ function loadPackConfig(path) {
   try {
     configString = fs.readFileSync(path, 'utf-8').replace(/\r\n/g,'\n').trim()
   } catch(e) {
-    error(e)
     return [false, e]
   }
 
@@ -31,6 +31,7 @@ function loadPackConfig(path) {
   })
 
   newPackConfig.upstreamVersion = "..."
+  newPackConfig.path = path
 
   return [true, newPackConfig]
 }
@@ -42,12 +43,13 @@ function loadPackConfig(path) {
  */
 function loadPackConfigs(packList) {
   let configs = {}
+  let errors = {}
   try {
     packList.forEach(pack => {
       const [s, v] = loadPackConfig(pack)
-      if(s) configs[v.id] = v;
+      if(s) configs[v.id] = v; else errors[pack] = v;
     })
-    return [true, configs]
+    return [true, configs, errors]
   } catch(e) {return [false, e]}
 }
 
@@ -86,7 +88,6 @@ function loadConfig(path) {
       saveConfig(path, defaultConfig)
       return [true, defaultConfig]
     } else {
-      error(e)
       return [false, e]
     }
   }
@@ -110,7 +111,6 @@ function loadConfig(path) {
     })
     return [true, newConfig]
   } catch(e) {
-    error(e)
     return [false, e]
   }
 }
