@@ -1,5 +1,5 @@
 import "./jsdoc.js"
-import {delay} from './utils.mjs'
+import { delay } from './Utils.mjs'
 
 /**
  * Create a modpack HTML element

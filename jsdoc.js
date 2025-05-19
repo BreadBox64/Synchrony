@@ -2,7 +2,7 @@
  * @typedef config
  * @type {object}
  * @property {string} synchronyVersion
- * @property {string} packConfigs
+ * @property {string[]} packConfigs
  * @property {number} maxWorkers
  * @property {string} themeBrightness
  * @property {string} themeColor

@@ -1,12 +1,27 @@
-const {log, debug, error, fs, fsp, path, dialog} = global.moduleExport
-const app = global.app
 import './jsdoc.js'
+import fs from 'node:fs'
+import { dialog } from 'electron'
+import { readFile } from './Utils.mjs'
+import { app } from 'electron/main'
 
 async function handleFileOpen(options) {
 	const { canceled, filePaths } = await dialog.showOpenDialog(options)
 	if (!canceled) {
 		return filePaths[0]
 	}
+}
+
+const defaultPackConfig = {
+  id: null,
+	name: 'Default Pack - Placeholder Name',
+	description: 'This is a placeholder description',
+	customColorSet: null,
+	customGradient: null,
+	localBranch: 'Main',
+	localVersion: '0.0.0',
+	upstreamVersion: '1.0.0',
+	upstreamVersionURL: null,
+	upstreamChangelist: null,
 }
 
 /**
@@ -16,14 +31,14 @@ async function handleFileOpen(options) {
  */
 function loadPackConfig(path) {
   let newPackConfig = {}
-  let configString
+  let packConfigFile
   try {
-    configString = fs.readFileSync(path, 'utf-8').replace(/\r\n/g,'\n').trim()
+    packConfigFile = readFile(path)
   } catch(e) {
     return [false, e]
   }
 
-  configString.split('\n').forEach((line) => {
+  packConfigFile.forEach((line) => {
     if(line === "") {} else {
       const [param, value] = line.split(' => ')
       newPackConfig[param] = value
@@ -54,14 +69,11 @@ function loadPackConfigs(packList) {
 }
 
 function savePackConfig(path, config) {
-  
-}
-
-async function newPackConfig() {
-  let path = ""
-  
-
-  return path
+  let outString = ""
+  for(const [key, value] of Object.entries(config)) {
+    outString += `${key} => ${value}\n`
+  }
+  fs.writeFileSync(path, outString)
 }
 
 const defaultConfig = {
@@ -82,7 +94,7 @@ function loadConfig(path) {
   let newConfig = structuredClone(defaultConfig)
   let configArray
   try {
-    configArray = fs.readFileSync(path, 'utf-8').toString().replace(/\r\n/g,'\n').split('\n')
+    configArray = readFile(path)
   } catch(e) {
     if(e.message.includes("no such file or directory")) {
       saveConfig(path, defaultConfig)
@@ -142,4 +154,4 @@ function saveConfig(path, config) {
   }
 }
 
-export {loadConfig, saveConfig, loadPackConfig, loadPackConfigs, savePackConfig, newPackConfig}
+export { loadConfig, saveConfig, loadPackConfig, loadPackConfigs, savePackConfig, defaultPackConfig }

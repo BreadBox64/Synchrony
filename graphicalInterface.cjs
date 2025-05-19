@@ -1,7 +1,7 @@
 const {log, debug, error, warn, path} = global.moduleExport; 
 const { Core } = require('./core.mjs')
 const { BrowserWindow, dialog, ipcMain, nativeTheme } = require('electron/main');
-const { delay } = require('./utils.mjs')
+const { delay } = require('./Utils.mjs')
 require('./jsdoc.js')
 
 const app = global.app
@@ -22,7 +22,7 @@ const createWindow = () => {
     width: 1080,
     height: 720,
 		webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
+      preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegrationInWorker: true
     },
     show: false,

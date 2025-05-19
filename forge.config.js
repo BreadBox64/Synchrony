@@ -16,7 +16,9 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {}
+      config: {
+        depends: ['xvfb']
+      }
     },
   ],
   plugins: [

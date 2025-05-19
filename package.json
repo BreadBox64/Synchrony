@@ -2,7 +2,7 @@
   "name": "synchrony",
   "version": "1.0.0-n5",
   "description": "A Simple Modpack Sync Application",
-  "main": "main.js",
+  "main": "main.mjs",
   "scripts": {
     "start": "electron-forge start",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -28,6 +28,7 @@
   "dependencies": {
     "bent": "^7.3.12",
     "node-downloader-helper": "^2.1.9",
-    "update-electron-app": "^3.1.1"
+    "update-electron-app": "^3.1.1",
+    "xvfb": "^0.4.0"
   }
 }

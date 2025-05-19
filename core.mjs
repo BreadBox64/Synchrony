@@ -1,22 +1,20 @@
-const {
-	log,
-	debug,
-	error,
-	warn,
-	fs,
-	fsp,
-	path,
-	util,
-	fetchString
-} = global.moduleExport
-const app = global.app
+import './jsdoc.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import util from 'node:util'
+import bent from 'bent'
+const fetchString = bent('string')
+import { app } from 'electron/main'
+
 import { DownloaderHelper } from 'node-downloader-helper'
-import { Version } from './version.mjs'
-import { loadConfig, saveConfig, loadPackConfig, loadPackConfigs, savePackConfig, newPackConfig } from "./config.mjs"
+import { Version } from './Version.mjs'
+import { InstallScriptParser } from './InstallScriptParser.mjs'
+import { loadConfig, saveConfig, loadPackConfig, loadPackConfigs, savePackConfig, defaultPackConfig } from './Config.mjs'
+import Utils from './Utils.mjs'
 
 const configPath = path.join(app.getPath('userData'), 'synchronyConfig')
 const sessionPath = app.getPath('sessionData')
-log(sessionPath)
+//log(sessionPath)
 /** @type {config} */
 let config = {}
 /** @type {Object.<string, packConfig>} */
@@ -51,6 +49,24 @@ function setPackConfig(id, path, callback = () => {}) {
 	}
 }
 
+function createPackConfig(basePackConfig, packPath, callback = () => {}) {
+	const evaluatedPackPath = path.normalize(packPath)
+
+	/**
+	 * @type {packConfig}
+	 */
+	let packConfig = defaultPackConfig
+	for(const [key, value] of Object.entries(basePackConfig)) {
+		packConfig[key] = value
+	}
+
+	packConfig.path = evaluatedPackPath
+	packConfigs[packConfig.id] = packConfig
+	savePackConfig(evaluatedPackPath, packConfig)
+	config.packConfigs.push(evaluatedPackPath)
+	saveConfig(configPath, config)
+}
+
 async function getRawVersion(id) {
 	return await fetchString(packConfigs[id].upstreamVersionURL)
 }
@@ -63,6 +79,7 @@ async function latestSynchronyString() {
 
 async function isPackUpdateNeeded(id) {
 	const packConfig = packConfigs[id]
+	if(packConfig.localDebug && packConfig.localDebug === 'true') return true;
 	const versioningFile = (await fetchString(packConfig.upstreamVersionURL)).trim().split('\n')
 	const upstreamVersion = (() => {
 		for(let i = 0; i < versioningFile.length; i++) {
@@ -72,7 +89,7 @@ async function isPackUpdateNeeded(id) {
 		}
 		throw(`No version found upstream for branch "${packConfig.localBranch}", config may be malformed!`)
 	})()
-	packConfig.upstreamVersion = upstreamVersion
+	packConfigs[id].upstreamVersion = upstreamVersion
 	return new Version(upstreamVersion).gt(new Version(packConfig.localVersion)) 
 }
 
@@ -100,7 +117,7 @@ function initialize(callback = () => {}) {
 		packConfigs = packData
 		callback('LOAD-PACKCONFIG-SUCCEED');
 	} else {
-		callback('LOAD-PACKCONFIG-FAIL', packData)
+		callback('LOAD-PACKCONFIG-FAIL', packData, errorData)
 		app.quit()
 	}
 }
@@ -111,6 +128,7 @@ function initialize(callback = () => {}) {
  * @returns {null}
  */
 async function updateModpack(id, callback = () => {}) {
+	if(!await isPackUpdateNeeded(id)) return;
 	const packConfig = packConfigs[id]
 
 	/** @type {string[]} */
@@ -120,13 +138,18 @@ async function updateModpack(id, callback = () => {}) {
 		return
 	}
 	callback('UPDATE-CHANGELISTGET-SUCCEED')
+
 	const changes = compileChanges(id, changelist, packConfig.localVersion, packConfig.upstreamVersion, callback)
 	callback('UPDATE-CHANGECOMPILE-SUCCEED')
-	const parsedChanges = parseChanges(id, changes, callback)
 
-	callback('UPDATE-CHANGEPARSE-SUCCEED')
-	const result = await singleThreadProcessChanges(id, parsedChanges, callback)
-	callback('UPDATE-CHANGEPROCESS-SUCCEED')
+	const parser = new InstallScriptParser(callback, changes)
+	parser.parseAll()
+
+	//const parsedChanges = parseChanges(id, changes, callback)
+
+	//callback('UPDATE-CHANGEPARSE-SUCCEED')
+	//const result = await singleThreadProcessChanges(id, parsedChanges, callback)
+	//callback('UPDATE-CHANGEPROCESS-SUCCEED')
 }
 
 /*
@@ -142,7 +165,7 @@ function saveAndExit() {
 
 // ===== EXPORT =====
 
-const Core = {
+export default {
 	configPath,
 	sessionPath,
 
@@ -150,6 +173,7 @@ const Core = {
 	setConfig,
 	getPackConfigs,
 	setPackConfig,
+	createPackConfig,
 	getRawVersion,
 	latestSynchronyString,
 
@@ -160,7 +184,6 @@ const Core = {
 	isPackUpdateNeeded,
 	isSynchronyUpdateNeeded
 }
-export { Core }
 
 // ===== PRIVATE METHODS ======
 
@@ -171,6 +194,9 @@ export { Core }
  * @returns 
 */
 async function getChangelist(id, packConfig, callback) {
+	if(packConfig.localDebug && packConfig.localDebug === 'true') {
+		return Utils.readFile(packConfig.upstreamChangelist)
+	}
 	const promise = new Promise((resolve, reject) => {
 		const changelistDownloadErrorHandler = (e) => {
 			callback('UPDATE-CHANGELISTGET-FAIL', e)
@@ -186,9 +212,8 @@ async function getChangelist(id, packConfig, callback) {
 			callback('UPDATE-CHANGELISTGET-START')
 			
 			dl.on('end', () => {
-				debug("Downloaded changelist file.")
 				let changelist
-				changelist = fs.readFileSync(path.join(sessionPath, `upstreamChangelist:${id}`), 'utf8').trim().split('\n');
+				changelist = Utils.readFile(path.join(sessionPath, `upstreamChangelist:${id}`))
 				resolve(changelist)
 			});
 			dl.on('error', changelistDownloadErrorHandler)
@@ -233,9 +258,6 @@ function compileChanges(id, changelist, oldVersion, newVersion, callback) {
 				changeStructure[currentHeader].push(line)
 			}
 		})
-
-		// TODO handle empty changesets
-
 
 		// TODO Can have dependent version changes i.e. pack-client automatically includes all changes in pack-server
 		// 1.0.0-c -> 1.1.0-c
@@ -381,7 +403,7 @@ async function multiThreadProcessChanges(id, changes) {
  * 
  * @param {changeObject} changes 
  */
-async function singleThreadProcessChanges(id, changes) {
+async function singleThreadProcessChanges(id, changes, callback) {
 	const numChanges = changes.changes.length
 	for(let i = 0; i < numChanges; i++) {
 		const change = changes.changes[i]
@@ -393,8 +415,12 @@ async function singleThreadProcessChanges(id, changes) {
 			case '$': { // Config operation
 				const [_arg, id, key, value] = change
 			}
-			case '?+': { // Prompt conditional download
-				const [_arg, id, path, decompress, cache, prompt, options] = change
+			case '?-': { // Query for conditional jump
+				const [_arg, id, condition, jump] = change
+				break
+			}
+			case '?+': { // Prompt user for conditional jump
+				const [_arg, id, prompt, options] = change
 				break
 				}
 			case '?~': { // Prompt user to select a folder
@@ -402,11 +428,12 @@ async function singleThreadProcessChanges(id, changes) {
 			}
 			case '/': { // Comment to user
 				const [_arg, id, comment] = change
+				callback('userComment', comment)
 				break
 				}
 			case '\\': { // Log to stdout
 				const [_arg, id, comment] = change
-				log('\\ found')
+				callback('stdout', comment)
 				break
 				}
 			case '+': { // Download and install file or compressed directory
