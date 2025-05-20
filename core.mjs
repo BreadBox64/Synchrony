@@ -12,9 +12,33 @@ import { InstallScriptParser } from './InstallScriptParser.mjs'
 import { loadConfig, saveConfig, loadPackConfig, loadPackConfigs, savePackConfig, defaultPackConfig } from './Config.mjs'
 import Utils from './Utils.mjs'
 
-const configPath = path.join(app.getPath('userData'), 'synchronyConfig')
-const sessionPath = app.getPath('sessionData')
-//log(sessionPath)
+const userDataPath = app.getPath('userData')
+const configPath = path.join(userDataPath, 'synchronyConfig')
+
+function safeMkDir(dirPath) {
+	try {
+		fs.mkdirSync(dirPath)
+	} catch(e) {} 
+}
+
+const sessionPath = path.join(userDataPath, 'sessionData')
+safeMkDir(sessionPath)
+app.setPath('sessionData', sessionPath)
+
+const logsPath = path.join(userDataPath, 'logs')
+safeMkDir(logsPath)
+app.setAppLogsPath(logsPath)
+
+const crashesPath = path.join(userDataPath, 'crashes')
+safeMkDir(crashesPath)
+app.setPath('crashDumps', crashesPath)
+
+const downloadsPath = path.join(userDataPath, 'downloads')
+safeMkDir(downloadsPath)
+
+const packDataPath = path.join(userDataPath, 'packData')
+safeMkDir(packDataPath)
+
 /** @type {config} */
 let config = {}
 /** @type {Object.<string, packConfig>} */
@@ -49,25 +73,7 @@ function setPackConfig(id, path, callback = () => {}) {
 	}
 }
 
-function createPackConfig(basePackConfig, packPath, callback = () => {}) {
-	const evaluatedPackPath = path.normalize(packPath)
-
-	/**
-	 * @type {packConfig}
-	 */
-	let packConfig = defaultPackConfig
-	for(const [key, value] of Object.entries(basePackConfig)) {
-		packConfig[key] = value
-	}
-
-	packConfig.path = evaluatedPackPath
-	packConfigs[packConfig.id] = packConfig
-	savePackConfig(evaluatedPackPath, packConfig)
-	config.packConfigs.push(evaluatedPackPath)
-	saveConfig(configPath, config)
-}
-
-async function getRawVersion(id) {
+async function debugGetRawVersion(id) {
 	return await fetchString(packConfigs[id].upstreamVersionURL)
 }
 
@@ -79,7 +85,7 @@ async function latestSynchronyString() {
 
 async function isPackUpdateNeeded(id) {
 	const packConfig = packConfigs[id]
-	if(packConfig.localDebug && packConfig.localDebug === 'true') return true;
+	if(packConfig.localDebug && packConfig.localDebug === 'true') return Utils.stringToBool(packConfig.upstreamVersionURL);
 	const versioningFile = (await fetchString(packConfig.upstreamVersionURL)).trim().split('\n')
 	const upstreamVersion = (() => {
 		for(let i = 0; i < versioningFile.length; i++) {
@@ -122,67 +128,134 @@ function initialize(callback = () => {}) {
 	}
 }
 
-/**
- * 
- * @param {string} id modpackId
- * @returns {null}
- */
-async function updateModpack(id, callback = () => {}) {
-	if(!await isPackUpdateNeeded(id)) return;
-	const packConfig = packConfigs[id]
-
-	/** @type {string[]} */
-	const changelist = await getChangelist(id, packConfig, callback)
-	if(changelist.length == 1 && changelist[0] == '') {
-		callback('UPDATE-CHANGELISTGET-EMPTYCHANGELIST')
-		return
-	}
-	callback('UPDATE-CHANGELISTGET-SUCCEED')
-
-	const changes = compileChanges(id, changelist, packConfig.localVersion, packConfig.upstreamVersion, callback)
-	callback('UPDATE-CHANGECOMPILE-SUCCEED')
-
-	const parser = new InstallScriptParser(callback, changes)
-	parser.parseAll()
-
-	//const parsedChanges = parseChanges(id, changes, callback)
-
-	//callback('UPDATE-CHANGEPARSE-SUCCEED')
-	//const result = await singleThreadProcessChanges(id, parsedChanges, callback)
-	//callback('UPDATE-CHANGEPROCESS-SUCCEED')
-}
-
-/*
-export function addModpack(addMethod, arguments) {
-	
-}
-*/
-
 function saveAndExit() {
 	saveConfig(configPath, config)
 	app.quit()
 }
 
+/**
+ * 
+ * @param {string} id modpackId
+ * @returns {null}
+ */
+async function updatePack(id, callback = () => {}) {
+	if(!await isPackUpdateNeeded(id)) return;
+	const packConfig = packConfigs[id]
+	if(packConfig.localDebug && packConfig.localDebug === 'true') {
+		packConfig.localVersion = '0.0.0'
+		packConfig.upstreamVersion = '1.0.0'
+	}
+
+	/** @type {string[]} */
+	const changelist = await getChangelist(id, packConfig, callback)
+	if(changelist.length == 1 && changelist[0] == '') {
+		callback('SYS-ERROR', 'UPDATE-CHANGELISTGET-EMPTYCHANGELIST')
+		return
+	}
+	callback('SYS-INFO', 'UPDATE-CHANGELISTGET-SUCCEED')
+
+	const changes = compileChanges(id, changelist, packConfig.localVersion, packConfig.upstreamVersion, callback)
+	callback('SYS-INFO', 'UPDATE-CHANGECOMPILE-SUCCEED')
+
+	const parser = new InstallScriptParser(callback, new Map([
+		['DOWNLOADS', path.join(downloadsPath, packConfig.id)],
+		['INSTANCE', 'IDK'],
+		['INSTALL', 'IDK'],
+		['APPDATA', path.join(packDataPath, packConfig.id)],
+		['SYNCHRONY', 'IDK']
+	]), changes)
+	parser.parseAll()
+}
+
+function createPack(basePackConfig, packPath, callback = () => {}) {
+	const evaluatedPackPath = Utils.evaluatePath(packPath)
+
+	/**
+	 * @type {packConfig}
+	 */
+	let packConfig = defaultPackConfig
+	for(const [key, value] of Object.entries(basePackConfig)) {
+		packConfig[key] = value
+	}
+
+	packConfig.path = evaluatedPackPath
+	packConfigs[packConfig.id] = packConfig
+	savePackConfig(evaluatedPackPath, packConfig)
+	config.packConfigs.push(evaluatedPackPath)
+	saveConfig(configPath, config)
+}
+
+function downloadPack(packURL, packPath, callback = () => {}) {
+	const evaluatedPackPath = Utils.evaluatePath(packPath)
+
+	const dl = new DownloaderHelper(packURL, evaluatedPackPath, {
+		fileName: 'synchronyModpackConfig',
+		override: true,
+		retry: {maxRetries: 5, delay: 1000}
+	});
+	
+	dl.on('end', () => {
+		config.packConfigs.push(evaluatedPackPath)
+		saveConfig(configPath, config)
+		let [_, packConfig] = loadPackConfig(evaluatedPackPath)
+		packConfigs[packConfig.id] = packConfig
+	});
+	dl.on('error', () => {})
+	dl.start().catch(() => {})
+}
+
+function addPack(packPath, callback = () => {}) {
+	const evaluatedPackPath = Utils.evaluatePath(packPath)
+	let [success, packConfig] = loadPackConfig(evaluatedPackPath)
+	if(success) {	
+		config.packConfigs.push(evaluatedPackPath)
+		saveConfig(configPath, config)
+		packConfigs[packConfig.id] = packConfig
+	}
+}
+
+function movePack(packId, newPath) {
+	const evaluatedNewPath = Utils.evaluatePath(newPath)
+	config.packConfigs.splice(config.packConfigs.indexOf(packConfigs[packId].path), 1, evaluatedNewPath)
+}
+
+function removePack(packId, purge) {
+	config.packConfigs.splice(config.packConfigs.indexOf(packConfigs[packId].path), 1)
+	delete packConfigs[packId]
+}
+
 // ===== EXPORT =====
 
 export default {
+	userDataPath,
 	configPath,
 	sessionPath,
+	logsPath,
+	crashesPath,
+	downloadsPath,
+	packDataPath,
 
 	getConfig,
 	setConfig,
 	getPackConfigs,
 	setPackConfig,
-	createPackConfig,
-	getRawVersion,
 	latestSynchronyString,
-
+	
 	initialize,
 	saveAndExit,
-	updateModpack,
+
+	updatePack,
+	createPack,
+	addPack,
+	downloadPack,
+	removePack,
 
 	isPackUpdateNeeded,
-	isSynchronyUpdateNeeded
+	isSynchronyUpdateNeeded,
+
+	debugGetRawVersion,
+	debugGetRawChangelist: () => {},
+	debugEvaluatePath: Utils.evaluatePath,
 }
 
 // ===== PRIVATE METHODS ======
@@ -199,21 +272,21 @@ async function getChangelist(id, packConfig, callback) {
 	}
 	const promise = new Promise((resolve, reject) => {
 		const changelistDownloadErrorHandler = (e) => {
-			callback('UPDATE-CHANGELISTGET-FAIL', e)
+			callback('SYS-ERROR', 'UPDATE-CHANGELISTGET-FAIL', e)
 			reject()
 		}
 		
 		try {
-			const dl = new DownloaderHelper(packConfig.upstreamChangelist, sessionPath, {
+			const dl = new DownloaderHelper(packConfig.upstreamChangelist, packDataPath, {
 				fileName: `upstreamChangelist:${id}`,
 				override: true,
 				retry: {maxRetries: 5, delay: 1000}
 			});
-			callback('UPDATE-CHANGELISTGET-START')
+			callback('SYS-INFO', 'UPDATE-CHANGELISTGET-START')
 			
 			dl.on('end', () => {
 				let changelist
-				changelist = Utils.readFile(path.join(sessionPath, `upstreamChangelist:${id}`))
+				changelist = Utils.readFile(path.join(packDataPath, `upstreamChangelist:${id}`))
 				resolve(changelist)
 			});
 			dl.on('error', changelistDownloadErrorHandler)
@@ -279,7 +352,7 @@ function compileChanges(id, changelist, oldVersion, newVersion, callback) {
 
 		return changes
 	} catch(e) {
-		callback('UPDATE-CHANGECOMPILE-FAIL', e)
+		callback('SYS-ERROR', 'UPDATE-CHANGECOMPILE-FAIL', e)
 	}
 }
 

@@ -1,9 +1,8 @@
 import './jsdoc.js'
-import { log, error } from 'node:console';
+import { log, debug, warn, error } from 'node:console';
 import { spawnSync } from 'node:child_process';
 import Xvfb from 'xvfb';
 import { createInterface } from 'node:readline';
-log('we made it to A')
 import Core from './core.mjs'
 
 let wrapup = () => {}
@@ -19,12 +18,45 @@ switch(process.platform) {
 		wrapup = () => {xvfb.stopSync()}
 }
 
-const rl = createInterface({
+const ioInterface = createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
 Core.initialize(log)
+
+function updateResponseHandler(msgType, ...data) {
+	switch(msgType) {
+		case 'SYS-INFO': {
+			log(`\x1b[1mSYS-INFO\x1b[0;90m : ${data.splice(0, 1)}\x1b[0m`, data)
+			break
+		}
+		case 'SYS-ERROR': {
+			warn(`\x1b[31;1mSYS-ERROR\x1b[0;90m : ${data.splice(0, 1)}\x1b[0m`, data)
+			break
+		}
+		case 'LOG' : {
+			data.forEach(d => log(`\x1b[1;34mLOG\x1b[0m ${d}`))
+			break
+		}
+		case 'DEBUG' : {
+			data.forEach(d => debug(`\x1b[1;35mDEBUG\x1b[0m ${d}`))
+			break
+		}
+		case 'WARN' : {
+			data.forEach(d => warn(`\x1b[1;33mWARN\x1b[0m ${d}`))
+			break
+		}
+		case 'ERROR' : {
+			data.forEach(d => error(`\x1b[1;31mERROR\x1b[0m ${d}`))
+			break
+		}
+		default : {
+			warn(`Unknown msgType ${msgType}, data follows:`)
+			log(data)
+		}
+	}
+}
 
 const helpText = `All Commands:
 	$Minstall $y<mode> <data> <flags...>
@@ -74,16 +106,34 @@ const helpText = `All Commands:
 	$Mhelp
 
 	$Mexit
+	-- $mx
 	-- $mstop
 	-- $mquit`.replaceAll('$M', '\x1b[0;95;1m').replaceAll('$m', '\x1b[0;35m').replaceAll('$y', '\x1b[0;33m').replaceAll('\n', '\x1b[0m\n')
 
-function updateResponseHandler(msgType, content) {
+function argify(inputString) {
+	let args = []
+	let currentArg = ''
+	let insideString = false
 
+	for(let i = 0; i < inputString.length; i++) {
+		const c = inputString[i]
+		if(c === '`') {
+			insideString = !insideString
+		} else if(c === ' ' && !insideString) {
+			args.push(currentArg)
+			currentArg = ''
+		} else {
+			currentArg += c
+		}
+	}
+	args.push(currentArg)
+
+	return args
 }
 
 function recursivePrompt() {
-  rl.question('\x1b[36;1mSynchronyCLI > \x1b[0m', async input => {
-		const splitInput = input.split(' ')
+  ioInterface.question('\x1b[36;1mSynchronyCLI > \x1b[0m', async input => {
+		const splitInput = argify(input)
 		try {
 			switch(splitInput[0].toLowerCase()) {
 				case 'install':
@@ -91,11 +141,11 @@ function recursivePrompt() {
 				case 'add-pack': {
 					const method = splitInput[1]
 					if(method === 'dir') {
-
+						Core.addPack(splitInput[2] + 'synchronyModpackConfig')
 					} else if(method === 'file') {
-
+						Core.addPack(splitInput[2])
 					} else if(method === 'url') {
-
+						Core.downloadPack(splitInput[2], splitInput[3])
 					} else if(method === 'debug') {
 						const newId = splitInput[2]
 						let idTaken = false
@@ -106,25 +156,31 @@ function recursivePrompt() {
 						if(idTaken) {
 							log(`\x1b[31mModpack id ${newId} is already taken.\x1b[0m`)
 						} else {
-							Core.createPackConfig({id: newId}, splitInput[3])
-							log(`New modpack created, edit using 'e ${newId}`)
+							Core.createPack({id: newId}, splitInput[3])
+							log(`New modpack created, edit using 'e ${newId}'`)
 						}
 					} else {
 						log(`\x1b[31mNot a valid pack addition method.\x1b[0m`)
 						break
 					}
-					const packPath = ''
-					Core.getConfig.packConfigs += packPath
 					break
 				}
 				case 'remove':
 				case 'r':
 				case 'remove-pack': {
+					const removeId = splitInput[2]
+					if(Object.keys(Core.getPackConfigs()).includes(removeId)) {
+						const purge = splitInput[3] === 'p'
+						Core.removePack(removeId, purge)
+						log(`Modpack removed, ${(purge)? 'files purged and deleted' : 'files are still intact'}.`)
+					} else {
+						log(`\x1b[31mNo modpack with id ${removeId} was found.\x1b[0m`)
+					}
 					break
 				}
 				case 'update':
 				case 'u': {
-					await Core.updateModpack(splitInput[1], updateResponseHandler)
+					await Core.updatePack(splitInput[1], updateResponseHandler)
 					break
 				}
 				case 'update-all':
@@ -132,10 +188,18 @@ function recursivePrompt() {
 					for(const id of Object.keys(Core.getPackConfigs())) {
 						try {
 							const response = await Core.isPackUpdateNeeded(id)
-							if(!response) continue
-							await Core.updateModpack(id, updateResponseHandler)
+							if(!response) {
+								log(`Update was not needed for \x1b[34;1m${id}\x1b[0m, skipping...`)
+								continue
+							}
+							log(`Beginning update for \x1b[34;1m${id}\x1b[0m.`)
+							try {
+								await Core.updatePack(id, updateResponseHandler)
+							} catch(e) {
+								error(e)
+							}
 						} catch(e) {
-							log(`\x1b[31mFailed to fetch version info for ${id}, skipping...\x1b[0m`)
+							log(`\x1b[31mFailed to fetch version info for \x1b[0;34;1m${id}\x1b[0;31m, skipping...\x1b[0m`)
 						}
 					}
 					break
@@ -195,7 +259,7 @@ function recursivePrompt() {
 					break
 				}
 				case 'out-version': {
-					log(await Core.getRawVersion(splitInput[1]))
+					log(await Core.debugGetRawVersion(splitInput[1]))
 					break
 				}
 				case 'out-changelist': {
@@ -210,10 +274,11 @@ function recursivePrompt() {
 					log(helpText)
 					break
 				}
+				case 'x':
 				case 'exit':
 				case 'stop':
 				case 'quit': {
-					rl.close()
+					ioInterface.close()
 					Core.saveAndExit()
 					wrapup()
 					return
