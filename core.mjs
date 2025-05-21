@@ -55,7 +55,7 @@ function setConfig(callback = () => {}) {
 	if(configSuccess) {
 		config = configData
 	} else {
-		callback('SET-CONFIG-FAIL')
+		callback('SET-CONFIG-FAIL', configData)
 	}
 }
 
@@ -149,22 +149,30 @@ async function updatePack(id, callback = () => {}) {
 	/** @type {string[]} */
 	const changelist = await getChangelist(id, packConfig, callback)
 	if(changelist.length == 1 && changelist[0] == '') {
-		callback('SYS-ERROR', 'UPDATE-CHANGELISTGET-EMPTYCHANGELIST')
+		callback('SYS-ERROR', 'CHANGELISTGET-EMPTYCHANGELIST')
 		return
 	}
-	callback('SYS-INFO', 'UPDATE-CHANGELISTGET-SUCCEED')
+	callback('SYS-INFO', 'CHANGELISTGET-SUCCEED')
 
 	const changes = compileChanges(id, changelist, packConfig.localVersion, packConfig.upstreamVersion, callback)
-	callback('SYS-INFO', 'UPDATE-CHANGECOMPILE-SUCCEED')
+	callback('SYS-INFO', 'CHANGECOMPILE-SUCCEED')
 
-	const parser = new InstallScriptParser(callback, new Map([
-		['DOWNLOADS', path.join(downloadsPath, packConfig.id)],
-		['INSTANCE', 'IDK'],
-		['INSTALL', 'IDK'],
-		['APPDATA', path.join(packDataPath, packConfig.id)],
-		['SYNCHRONY', 'IDK']
-	]), changes)
-	parser.parseAll()
+	const packDownloadPath = path.join(downloadsPath, packConfig.id)
+	fs.rmSync(packDownloadPath, {force: true, recursive: true})
+	fs.mkdirSync(packDownloadPath)
+	const parser = new InstallScriptParser(
+		callback,
+		new Map([
+			['DOWNLOADS', packDownloadPath],
+			['INSTANCE', 'IDK'],
+			['INSTALL', 'IDK'],
+			['APPDATA', path.join(packDataPath, packConfig.id)],
+			['SYNCHRONY', 'IDK']
+		]),
+		changes,
+		(oldVersion, newVersion) => {return compileChanges(id, changelist, oldVersion, newVersion, callback)}
+	)
+	await parser.parseAll()
 }
 
 function createPack(basePackConfig, packPath, callback = () => {}) {

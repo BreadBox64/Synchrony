@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "bent": "^7.3.12",
+    "decompress": "^4.2.1",
     "node-downloader-helper": "^2.1.9",
     "update-electron-app": "^3.1.1",
     "xvfb": "^0.4.0"

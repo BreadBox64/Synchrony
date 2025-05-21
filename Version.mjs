@@ -2,7 +2,7 @@
  * 
  */
 export class Version {
-	#versionRegex = /(\d+)\.(\d+)\.(\d+)(?:-([b|n])(\d+))?/;
+	#versionRegex = /(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(\d*))?/;
 	major;
 	minor;
 	patch;
@@ -14,7 +14,7 @@ export class Version {
 	 * @param {string|[number, number, number, string?, number?]} args 
 	 */
   constructor(args) {
-		if(typeof(args) === "string") this.#fromString(args); else this.#fromValues(args)
+		if(typeof(args) === "string") this.#fromString(args); else this.#fromValueArray(args)
   }
 
 	#fromString(inputStr) {
@@ -24,18 +24,28 @@ export class Version {
 		this.minor = parseInt(versionIter[2])
 		this.patch = parseInt(versionIter[3])
 
-		if(versionIter[5] != null) {
+		if(versionIter[4] != null) {
 			this.flag = versionIter[4]
+		}
+		if(versionIter[5] != null) {
 			this.flagv = parseInt(versionIter[5])
 		}
 	}
   
-	#fromValues(values) {
+	#fromValueArray(values) {
 		this.major = values[0]
 		this.minor = values[1]
 		this.patch = values[2]
 		this.flag ??= values[3]
 		this.flagv ??= values[4]
+	}
+
+	#fromValues(major, minor, patch, ...flag) {
+		this.major = major
+		this.minor = minor
+		this.patch = patch
+		this.flag ??= flag[0]
+		this.flagv ??= flag[1]
 	}
 	
 	/**
