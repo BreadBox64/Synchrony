@@ -1,7 +1,7 @@
 import './jsdoc.js'
 import fs from 'node:fs'
 import { dialog } from 'electron'
-import { readFile } from './Utils.mjs'
+import { readFile } from './UtilsServer.mjs'
 import { app } from 'electron/main'
 
 async function handleFileOpen(options) {
@@ -15,8 +15,6 @@ const defaultPackConfig = {
   id: null,
 	name: 'Default Pack - Placeholder Name',
 	description: 'This is a placeholder description',
-	customColorSet: null,
-	customGradient: null,
 	localBranch: 'Main',
 	localVersion: '0.0.0',
 	upstreamVersion: '1.0.0',

@@ -10,7 +10,7 @@ import { DownloaderHelper } from 'node-downloader-helper'
 import { Version } from './Version.mjs'
 import { InstallScriptParser } from './InstallScriptParser.mjs'
 import { loadConfig, saveConfig, loadPackConfig, loadPackConfigs, savePackConfig, defaultPackConfig } from './Config.mjs'
-import Utils from './Utils.mjs'
+import Utils from './UtilsServer.mjs'
 
 const userDataPath = app.getPath('userData')
 const configPath = path.join(userDataPath, 'synchronyConfig')
@@ -136,9 +136,10 @@ function saveAndExit() {
 /**
  * 
  * @param {string} id modpackId
+ * @param {Function} callback 
  * @returns {null}
  */
-async function updatePack(id, callback = () => {}) {
+async function updatePack(id, callback) {
 	if(!await isPackUpdateNeeded(id)) return;
 	const packConfig = packConfigs[id]
 	if(packConfig.localDebug && packConfig.localDebug === 'true') {
@@ -173,6 +174,7 @@ async function updatePack(id, callback = () => {}) {
 		(oldVersion, newVersion) => {return compileChanges(id, changelist, oldVersion, newVersion, callback)}
 	)
 	await parser.parseAll()
+	callback('SYS-INFO', 'PARSER-COMPLETE')
 }
 
 function createPack(basePackConfig, packPath, callback = () => {}) {

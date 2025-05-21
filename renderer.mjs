@@ -1,8 +1,9 @@
 import "./jsdoc.js"
-import { delay } from './utils.mjs'
+import { delay } from './UtilsRenderer.mjs'
 import { createModpackElement, updateElementDetails, updateElementTheme } from "./modpackElement.mjs"
 import { themes, nextMapThemeColor, nextMapThemeBrightness, symbolMapThemeBrightness } from "./theme.mjs"
 
+console.log(`\x1b[1;34mRENDERER\x1b[0m`)
 const electronAPI = window.electronAPI
 const root = document.querySelector(':root')
 const modpackList = document.getElementById('modpackList')
@@ -404,6 +405,7 @@ electronAPI.onPackConfigRead((packConfigs) => {
 	setupModpackAdd()
 	
 	for(const [id, config] of Object.entries(packConfigs)) {
+		console.log(id)
 		addModpack(id, config)
 		states[id] = 'syncing'
 		setSymbolByState(id, false, false)

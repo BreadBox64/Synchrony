@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  testValue: 'hello bagel',
   node: () => process.versions.node,
   chrome: () => process.versions.chrome,
   electron: () => process.versions.electron,
@@ -14,9 +15,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onNativeThemeChange: (callback) => ipcRenderer.on('App:NativeThemeChange', (_event, useDarkMode) => callback(useDarkMode)),
   onReady: (callback) => ipcRenderer.on('Ready', (_event) => callback()),
   onConfigRead: (callback) => ipcRenderer.on('App:ConfigRead', (_event, config) => callback(config)),
-  onPackConfigRead: (callback) => ipcRenderer.on('Pack:ConfigsRead', (_event, configs) => callback(configs)),
+  onPackConfigRead: (callback) => ipcRenderer.on('App:PackConfigsRead', (_event, configs) => callback(configs)),
+
   onDisplayPrompt: (callback) => ipcRenderer.on('Prompt:Display', (_event, respond, options) => callback((respond) ? (data) => ipcRenderer.invoke(respond, data) : () => {}, options)),
 
+  onConfigReadError: (callback) => ipcRenderer.on('Error:ConfigRead', (_event, err) => callback(modpackId, err)),
   onVersionDownloadError: (callback) => ipcRenderer.on('Error:VersionDownload', (_event, modpackId, err) => callback(modpackId, err)),
   onVersionReadError: (callback) => ipcRenderer.on('Error:VersionRead', (_event, modpackId, err) => callback(modpackId, err)),
   onChangelistDownloadError: (callback) => ipcRenderer.on('Error:ChangelistDownload', (_event, modpackId, err) => callback(modpackId, err)),

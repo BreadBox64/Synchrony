@@ -1,7 +1,7 @@
 import { DownloaderHelper } from 'node-downloader-helper'
 import path from 'node:path'
 import fs from 'node:fs'
-import { readFile } from './Utils.mjs'
+import { readFile } from './UtilsServer.mjs'
 import decompress from 'decompress'
 
 const nullExecute = () => {}
@@ -115,9 +115,9 @@ class InstallScriptParser {
 						throw new Error('Imported changes caused an error to be thrown.')
 					}},
 				this.paths, importedChanges, this.changeCompiler, this.enviroment)
-			this.callback('SYS-INFO', 'PARSER-CONTEXTSWITCH', `Entering subparser for changes imported from the '${oldVersion} -> ${newVersion}' changeset.`)
+			this.callback('SYS-INFO', 'PARSER-CONTEXTENTER', `Entering subparser for changes imported from the '${oldVersion} -> ${newVersion}' changeset.`)
 			await subParser.parseAll()
-			this.callback('SYS-INFO', 'PARSER-CONTEXTSWITCH', `Exiting subparser for imported changes.`)
+			this.callback('SYS-INFO', 'PARSER-CONTEXTEXIT', `Exiting subparser for imported changes.`)
 		}],
 		['config', nullExecute],
 		['set', (args) => {this.enviroment.set(args.splice(0, 1)[0], JSON.parse(args.join(' ')))}],
@@ -213,7 +213,7 @@ class InstallScriptParser {
 
 	async parseAll() {
 		for(this.currentLine = 0; this.currentLine < this.scriptLength; this.currentLine++) {
-			this.callback('SYS-INFO', 'PARSER-STATUS', `Parsing line number ${this.currentLine}`)
+			this.callback('SYS-INFO', 'PARSER-STATUS', this.currentLine, this.scriptLength, `Parsing line number ${this.currentLine}`)
 			const line = this.script[this.currentLine]
 			try {
 				await this.parseLine(line)

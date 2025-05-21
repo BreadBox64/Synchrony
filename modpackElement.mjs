@@ -1,5 +1,5 @@
 import "./jsdoc.js"
-import { delay } from './Utils.mjs'
+import { delay } from './UtilsRenderer.mjs'
 
 /**
  * Create a modpack HTML element
@@ -35,8 +35,10 @@ export function createModpackElement(config, displayConfig) {
 			</div>
 		</div>
 		<div class="textElement content">
-			<h1 class="nunito-sans content-title">${config.name}</h1>
-			<p class="nunito-sans content-status">Checking Online for Updates...</p>
+			<div>
+				<h1 class="nunito-sans content-title">${config.name}</h1>
+				<p class="nunito-sans content-status">Checking Online for Updates...</p>
+			</div>
 		</div>
 		<div class="textElement details">
 			<h1 class="nunito-sans">Modpack Branch:</h1>
