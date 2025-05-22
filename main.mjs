@@ -1,6 +1,9 @@
 import { log } from 'node:console'
 import { ChildProcess } from 'node:child_process'
 import path from 'node:path'
+import { app } from 'electron/main'
+import { shell } from 'electron'
+import fs from 'node:fs'
 
 process.noDeprecation = true
 log(process.argv)
@@ -48,6 +51,10 @@ function handleSquirrelEvent() {
 
       // Install desktop and start menu shortcuts
       spawnUpdate(['--createShortcut', exeName])
+      shell.writeShortcutLink(path.join(app.getPath('appData'), 'Microsoft/Windows/Start Menu/Programs/Synchrony'), {
+        target: exeName,
+        description: 'Launch the Synchrony Mod Manager'
+      })
 
       setTimeout(app.quit, 1000)
       return true
@@ -58,7 +65,7 @@ function handleSquirrelEvent() {
 
       // Remove desktop and start menu shortcuts
       spawnUpdate(['--removeShortcut', exeName])
-
+      try {fs.rmSync(path.join(app.getPath('appData'), 'Microsoft/Windows/Start Menu/Programs/Synchrony'))} catch(e) {}
       setTimeout(app.quit, 1000)
       return true
 
